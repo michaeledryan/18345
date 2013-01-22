@@ -19,7 +19,6 @@ public class ClientHandler implements Runnable {
 		client = incoming;
 		in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 		out = new PrintWriter(client.getOutputStream(), true);
-		out.println("hello");
 	}
 
 	@Override
@@ -34,8 +33,8 @@ public class ClientHandler implements Runnable {
 			System.out.format("Failed to read request packet for client %d.\n",
 					id);
 		}
-		
-		out.println("HTTP/1.1 404 NOT FOUND\r\n\r\n");
+
+		out.print("HTTP/1.1 404 NOT FOUND\r\n\r\n");
 		out.flush();
 		System.out.format("Goodbye client %d\n", id);
 		try {

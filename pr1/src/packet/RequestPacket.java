@@ -12,17 +12,16 @@ public class RequestPacket {
 		System.out.println("Now parsing packet...");
 		String line = packet.readLine();
 		System.out.println(line);
-		
+
 		// Get request from middle field
-		if(line == null)
+		if (line == null)
 			throw new IOException();
 		String[] tokens = line.split(" ");
-		if(tokens.length < 3)
+		if (tokens.length < 3)
 			throw new IOException();
 		request = tokens[1];
-		if(request.equals("/"))
+		if (request.equals("/"))
 			request = "/index.html";
-
 
 		// Then loop through header and add to map
 		while (!(line = packet.readLine()).equals("")) {
