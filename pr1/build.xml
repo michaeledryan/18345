@@ -1,14 +1,13 @@
 <project name="Vodserver" basedir="." default="build">
 
-    <property name="src" value="./src" />
-    <property name="bin" value="." />
-
     <target name="clean">
         <delete dir="edu" />
+        <delete dir="packet" />
+        <delete dir="server" />
     </target>
 
     <target name="compile">
-        <javac includeantruntime="true" srcdir="${src}" destdir="${bin}" />
+        <javac includeantruntime="true" srcdir="src" destdir="." />
     </target>
 
     <target name="build" depends="clean,compile" />
