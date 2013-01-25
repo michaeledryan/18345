@@ -1,2 +1,0 @@
-This is Michael reporting in.
-Now testing git within eclipse.
