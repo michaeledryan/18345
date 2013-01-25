@@ -1,0 +1,16 @@
+<project name="Vodserver" basedir="." default="build">
+
+    <property name="src" value="./src" />
+    <property name="bin" value="." />
+
+    <target name="clean">
+        <delete dir="edu" />
+    </target>
+
+    <target name="compile">
+        <javac includeantruntime="true" srcdir="${src}" destdir="${bin}" />
+    </target>
+
+    <target name="build" depends="clean,compile" />
+
+</project>
