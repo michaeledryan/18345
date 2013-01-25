@@ -1,15 +1,37 @@
-<project name="Vodserver" basedir="." default="build">
+<project name="Vodserver" basedir="." default="deploy">
+
+    <property name="src" value="./src" />
+    <property name="bin" value="./bin" />
 
     <target name="clean">
-        <delete dir="edu" />
-        <delete dir="packet" />
-        <delete dir="server" />
+        <delete dir="${bin}" />
+        <delete>
+            <fileset dir="." includes="**/*.class" />   
+        </delete>
+
+        <delete includeemptydirs="true">
+            <fileset dir="."  >
+                <and>
+                    <size value="0" />
+                    <type type="dir" />
+                </and>
+            </fileset>
+        </delete>
     </target>
 
     <target name="compile">
-        <javac includeantruntime="true" srcdir="src" destdir="." />
+        <mkdir dir="${bin}" />
+        <javac includeantruntime="true" srcdir="${src}" destdir="${bin}" />
+    </target>
+
+    <target name="copy">
+        <copy todir=".">  
+            <fileset dir="${bin}" includes="**/*.class">  
+            </fileset>
+        </copy>
     </target>
 
     <target name="build" depends="clean,compile" />
+    <target name="deploy" depends="clean,compile,copy" />
 
 </project>
