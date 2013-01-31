@@ -14,7 +14,7 @@ public class ClientHandler implements Runnable {
 	private static int clientCount = 0;
 	private int id;
 	private boolean listening = true;
-	
+
 	private Socket client;
 	private BufferedReader in;
 	private PrintWriter out;
@@ -30,7 +30,7 @@ public class ClientHandler implements Runnable {
 	public void run() {
 		System.out.format("Connected to client #%d\n", id);
 
-	//	do {
+		// do {
 		RequestPacket request = null;
 		try {
 			request = new RequestPacket(in);
@@ -43,13 +43,13 @@ public class ClientHandler implements Runnable {
 		if (request.getRequest().equals("favicon.ico"))
 			out.print("HTTP/1.1 404 NOT FOUND\r\n\r\n");
 		else {
-		ResponsePacket response = new ResponsePacket(request);
-			//out.print("HTTP/1.1 404 NOT FOUND\r\n\r\n");
+			ResponsePacket response = new ResponsePacket(request);
+			// out.print("HTTP/1.1 404 NOT FOUND\r\n\r\n");
 			out.print(response.getResponse());
 		}
 		out.flush();
 		System.out.format("Goodbye client %d\n", id);
-	//	} while (listening);
+		// } while (listening);
 		try {
 			in.close();
 			out.close();

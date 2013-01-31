@@ -29,7 +29,8 @@ public class RequestPacket {
 			tokens = line.split(":");
 			if (tokens.length >= 2)
 				headers.put(tokens[0], tokens[1].trim());
-			else System.out.println(tokens);
+			else
+				System.out.println(tokens);
 		}
 
 		System.out.println("Packet parsed.");
