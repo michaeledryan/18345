@@ -21,7 +21,7 @@ public class RequestPacket {
 			throw new IOException();
 		request = tokens[1];
 		if (request.equals("/"))
-			request = "/index.html";
+			request = "index.html";
 
 		// Then loop through header and add to map
 		while (!(line = packet.readLine()).equals("")) {
@@ -29,6 +29,7 @@ public class RequestPacket {
 			tokens = line.split(":");
 			if (tokens.length >= 2)
 				headers.put(tokens[0], tokens[1].trim());
+			else System.out.println(tokens);
 		}
 
 		System.out.println("Packet parsed.");

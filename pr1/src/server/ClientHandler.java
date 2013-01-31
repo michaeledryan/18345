@@ -1,15 +1,20 @@
 package server;
 
-import java.io.*;
-import java.net.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 
-import packet.*;
+import packet.RequestPacket;
+import packet.ResponsePacket;
 
 public class ClientHandler implements Runnable {
 
 	private static int clientCount = 0;
 	private int id;
-
+	private boolean listening = true;
+	
 	private Socket client;
 	private BufferedReader in;
 	private PrintWriter out;
@@ -24,19 +29,27 @@ public class ClientHandler implements Runnable {
 	@Override
 	public void run() {
 		System.out.format("Connected to client #%d\n", id);
-		// out.format("You are client #%d\n", id);
 
-		RequestPacket request;
+	//	do {
+		RequestPacket request = null;
 		try {
 			request = new RequestPacket(in);
 		} catch (IOException e) {
 			System.out.format("Failed to read request packet for client %d.\n",
 					id);
+			listening = false;
 		}
 
-		out.print("HTTP/1.1 404 NOT FOUND\r\n\r\n");
+		if (request.getRequest().equals("favicon.ico"))
+			out.print("HTTP/1.1 404 NOT FOUND\r\n\r\n");
+		else {
+		ResponsePacket response = new ResponsePacket(request);
+			//out.print("HTTP/1.1 404 NOT FOUND\r\n\r\n");
+			out.print(response.getResponse());
+		}
 		out.flush();
 		System.out.format("Goodbye client %d\n", id);
+	//	} while (listening);
 		try {
 			in.close();
 			out.close();
