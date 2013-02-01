@@ -1,13 +1,17 @@
 package packet;
 
-import java.util.*;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+import server.DCException;
 
 public class RequestPacket {
 	private String request;
 	private Map<String, String> headers = new HashMap<String, String>();
 
-	public RequestPacket(BufferedReader packet) throws IOException {
+	public RequestPacket(BufferedReader packet) throws DCException, IOException {
 		// First parse header line to get request
 		System.out.println("Now parsing packet...");
 		String line = packet.readLine();
@@ -15,7 +19,7 @@ public class RequestPacket {
 
 		// Get request from middle field
 		if (line == null)
-			throw new IOException();
+			throw new DCException();
 		String[] tokens = line.split(" ");
 		if (tokens.length < 3)
 			throw new IOException();
