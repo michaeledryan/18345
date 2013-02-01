@@ -25,9 +25,8 @@
     </target>
 
     <target name="copy">
-        <copy todir=".">  
-            <fileset dir="${bin}" includes="**/*.class">  
-            </fileset>
+        <copy todir="${bin}/www">  
+            <fileset dir="www" includes="**/*" />  
         </copy>
     </target>
 

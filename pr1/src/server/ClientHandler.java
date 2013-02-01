@@ -32,24 +32,25 @@ public class ClientHandler implements Runnable {
 
 		// do {
 		RequestPacket request = null;
-		try {
-			request = new RequestPacket(in);
-		} catch (IOException e) {
-			System.out.format("Failed to read request packet for client %d.\n",
-					id);
-			listening = false;
+
+		while (listening) {
+			try {
+				request = new RequestPacket(in);
+			} catch (IOException e) {
+				System.out.format(
+						"Failed to read request packet for client %d.\n", id);
+				listening = false;
+			}
+
+			ResponsePacket response = new ResponsePacket(request, out);
+			response.sendResponse();
+
+			String connection = request.getHeader("Connection");
+			if (connection != null && connection.equals("Close"))
+				listening = false;
 		}
 
-		if (request.getRequest().equals("favicon.ico"))
-			out.print("HTTP/1.1 404 NOT FOUND\r\n\r\n");
-		else {
-			ResponsePacket response = new ResponsePacket(request);
-			// out.print("HTTP/1.1 404 NOT FOUND\r\n\r\n");
-			out.print(response.getResponse());
-		}
-		out.flush();
 		System.out.format("Goodbye client %d\n", id);
-		// } while (listening);
 		try {
 			in.close();
 			out.close();
