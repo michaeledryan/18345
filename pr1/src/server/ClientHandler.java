@@ -3,7 +3,7 @@ package server;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.OutputStream;
 import java.net.Socket;
 
 import packet.RequestPacket;
@@ -17,13 +17,13 @@ public class ClientHandler implements Runnable {
 
 	private Socket client;
 	private BufferedReader in;
-	private PrintWriter out;
+	private OutputStream out;
 
 	public ClientHandler(Socket incoming) throws IOException {
 		id = ++clientCount;
 		client = incoming;
 		in = new BufferedReader(new InputStreamReader(client.getInputStream()));
-		out = new PrintWriter(client.getOutputStream(), true);
+		out = client.getOutputStream();
 	}
 
 	@Override
@@ -36,18 +36,20 @@ public class ClientHandler implements Runnable {
 		while (listening) {
 			try {
 				request = new RequestPacket(in);
+				ResponsePacket response = new ResponsePacket(request, out);
+				response.sendResponse();
+
+				String connection = request.getHeader("Connection");
+				if (connection != null && connection.equals("Close"))
+					listening = false;
 			} catch (IOException e) {
 				System.out.format(
 						"Failed to read request packet for client %d.\n", id);
 				listening = false;
-			}
-
-			ResponsePacket response = new ResponsePacket(request, out);
-			response.sendResponse();
-
-			String connection = request.getHeader("Connection");
-			if (connection != null && connection.equals("Close"))
+			} catch (DCException e) {
+				System.out.print("Client disconnected... ");
 				listening = false;
+			}
 		}
 
 		System.out.format("Goodbye client %d\n", id);

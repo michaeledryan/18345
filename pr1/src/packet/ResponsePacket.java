@@ -1,29 +1,32 @@
 package packet;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.URLConnection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-
 
 /**
  * Assembles a response to the GET request.
  */
 public class ResponsePacket {
 	private RequestPacket request;
-	private PrintWriter out;
+	private OutputStream out;
+	private PrintWriter textOut;
 	private File target;
 	private Map<String, String> headers = new HashMap<String, String>();
 
 	private String header;
 
-	public ResponsePacket(RequestPacket request, PrintWriter output) {
+	public ResponsePacket(RequestPacket request, OutputStream output) {
 		this.request = request;
 		this.out = output;
+		this.textOut = new PrintWriter(out, true);
 	}
 
 	public void sendResponse() {
@@ -36,8 +39,8 @@ public class ResponsePacket {
 
 		header = "HTTP/1.1 200 OK\r\n";
 		makeHeaders();
-		out.write(header);
-		out.flush();
+		textOut.write(header);
+		textOut.flush();
 
 		System.out.println("\n\nPrinting response header:");
 		System.out.println(header);
@@ -46,18 +49,17 @@ public class ResponsePacket {
 		 * TODO: find a better way to copy then reading the entire array into a
 		 * buffer then pushing back out
 		 */
-		char[] buffer = new char[(int) target.length()];
+		byte[] buffer = new byte[(int) target.length()];
 		try {
-			new FileReader(target).read(buffer);
+			new FileInputStream(target).read(buffer);
+			out.write(buffer, 0, (int) target.length());
+			out.flush();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
-			System.out.println("Could not read file.");
+			System.out.println("Could not read/write file.");
 			return;
 		}
-		out.print(buffer);
-		out.print("\r\n\r\n");
-		out.flush();
 	}
 
 	private void send404() {
@@ -66,8 +68,8 @@ public class ResponsePacket {
 
 		System.out.println("\n\nPrinting 404 header:");
 		System.out.println(header);
-		out.write(header);
-		out.flush();
+		textOut.write(header);
+		textOut.flush();
 	}
 
 	/*
@@ -87,7 +89,11 @@ public class ResponsePacket {
 		else
 			header += "Connection: Keep-Alive\r\n";
 		header += "Date: " + new Date().toString() + "\r\n";
+		header += "Cache-Control: max-age=0\r\n";
 		header += "Content-Length: " + target.length() + "\r\n";
+		header += "Content-Type: "
+				+ URLConnection.guessContentTypeFromName(target.getName())
+				+ "\r\n";
 		header += "\r\n";
 	}
 
