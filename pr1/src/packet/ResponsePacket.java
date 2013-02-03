@@ -38,9 +38,7 @@ public class ResponsePacket {
 		}
 
 		header = "HTTP/1.1 200 OK\r\n";
-		makeHeaders();
-		textOut.write(header);
-		textOut.flush();
+		
 
 		System.out.println("\n\nPrinting response header:");
 		System.out.println(header);
@@ -53,6 +51,11 @@ public class ResponsePacket {
 		String[] range;
 		int lowerLimit = 0;
 		int length = (int) target.length();
+		
+		System.out.println("length = " + length);
+		makeHeaders(length);
+		textOut.write(header);
+		textOut.flush();
 
 		if (request.getHeader("Range") != null) {
 			System.out.println("Range header:" + request.getHeader("Range"));
@@ -60,9 +63,6 @@ public class ResponsePacket {
 			lowerLimit = Integer.parseInt(range[0]);
 			if (range.length > 1)
 				length = Integer.parseInt(range[1]) - lowerLimit;
-			for (String string : range) {
-				System.out.println(string);
-			}
 			System.out.println("\n\n");
 		}
 
@@ -82,8 +82,8 @@ public class ResponsePacket {
 
 	private void send404() {
 		header = "HTTP/1.1 404 Not Found\r\n";
-		makeHeaders();
-
+		makeHeaders(0);
+		
 		System.out.println("\n\nPrinting 404 header:");
 		System.out.println(header);
 		textOut.write(header);
@@ -94,7 +94,7 @@ public class ResponsePacket {
 	 * Not sure if we need this, but I figured I'd mimic breaking down the other
 	 * packet
 	 */
-	private void makeHeaders() {
+	private void makeHeaders(int length) {
 		/*
 		 * headers.put("Connection:", "Keep-Alive"); headers.put("Date:", new
 		 * Date().toString()); headers.put("Content-Length:",
@@ -108,7 +108,9 @@ public class ResponsePacket {
 			header += "Connection: Keep-Alive\r\n";
 		header += "Date: " + new Date().toString() + "\r\n";
 		header += "Cache-Control: max-age=0\r\n";
-		header += "Content-Length: " + target.length() + "\r\n";
+		header += "Content-Length: " + length + "\r\n";
+		if (length > 0) 
+			header += "X-Content-Duration:" + 30.0;
 		header += "Content-Type: "
 				+ URLConnection.guessContentTypeFromName(target.getName())
 				+ "\r\n";
