@@ -49,14 +49,32 @@ public class ResponsePacket {
 		 * TODO: find a better way to copy then reading the entire array into a
 		 * buffer then pushing back out
 		 */
-		byte[] buffer = new byte[(int) target.length()];
+
+		String[] range;
+		int lowerLimit = 0;
+		int length = (int) target.length();
+
+		if (request.getHeader("Range") != null) {
+			System.out.println("Range header:" + request.getHeader("Range"));
+			range = request.getHeader("Range").split("=")[1].split("-");
+			lowerLimit = Integer.parseInt(range[0]);
+			if (range.length > 1)
+				length = Integer.parseInt(range[1]) - lowerLimit;
+			for (String string : range) {
+				System.out.println(string);
+			}
+			System.out.println("\n\n");
+		}
+
+		byte[] buffer = new byte[length];
 		try {
-			new FileInputStream(target).read(buffer);
-			out.write(buffer, 0, (int) target.length());
+			new FileInputStream(target).read(buffer, 0, length);
+			out.write(buffer, 0, length);
 			out.flush();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
+			System.out.println(e.toString());
 			System.out.println("Could not read/write file.");
 			return;
 		}
