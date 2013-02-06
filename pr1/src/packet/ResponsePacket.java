@@ -37,8 +37,9 @@ public class ResponsePacket {
 			return;
 		}
 
+		System.out.print(target.getPath());
+
 		header = "HTTP/1.1 200 OK\r\n";
-		
 
 		System.out.println("\n\nPrinting response header:");
 		System.out.println(header);
@@ -51,8 +52,7 @@ public class ResponsePacket {
 		String[] range;
 		int lowerLimit = 0;
 		int length = (int) target.length();
-		
-		System.out.println("length = " + length);
+
 		makeHeaders(length);
 		textOut.write(header);
 		textOut.flush();
@@ -65,6 +65,8 @@ public class ResponsePacket {
 				length = Integer.parseInt(range[1]) - lowerLimit;
 			System.out.println("\n\n");
 		}
+
+		System.out.println(header);
 
 		byte[] buffer = new byte[length];
 		try {
@@ -83,7 +85,7 @@ public class ResponsePacket {
 	private void send404() {
 		header = "HTTP/1.1 404 Not Found\r\n";
 		makeHeaders(0);
-		
+
 		System.out.println("\n\nPrinting 404 header:");
 		System.out.println(header);
 		textOut.write(header);
@@ -109,8 +111,10 @@ public class ResponsePacket {
 		header += "Date: " + new Date().toString() + "\r\n";
 		header += "Cache-Control: max-age=0\r\n";
 		header += "Content-Length: " + length + "\r\n";
-		if (length > 0) 
-			header += "X-Content-Duration:" + 30.0;
+		if (length > 0)
+			header += "X-Content-Duration:" + 30.0 + "\r\n";
+		header += "Content-Range: bytes 0-" + (length - 1) + "/" + length
+				+ "\r\n";
 		header += "Content-Type: "
 				+ URLConnection.guessContentTypeFromName(target.getName())
 				+ "\r\n";
