@@ -6,10 +6,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.net.URLConnection;
+import java.net.SocketException;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Assembles a response to the GET request.
@@ -19,30 +17,24 @@ public class ResponsePacket {
 	private OutputStream out;
 	private PrintWriter textOut;
 	private File target;
-	private Map<String, String> headers = new HashMap<String, String>();
 
 	private String header;
 
-	public ResponsePacket(RequestPacket request, OutputStream output) {
+	public ResponsePacket(RequestPacket request, OutputStream output,
+			PrintWriter textoutput) {
 		this.request = request;
 		this.out = output;
-		this.textOut = new PrintWriter(out, true);
+		this.textOut = textoutput;
 	}
 
-	public void sendResponse() {
+	public Boolean sendResponse() {
 		String filename = "www/" + request.getRequest();
 		target = new File(filename);
 		if (!target.exists()) {
 			this.send404();
-			return;
+			return true;
 		}
 
-		System.out.print(target.getPath());
-
-		header = "HTTP/1.1 200 OK\r\n";
-
-		System.out.println("\n\nPrinting response header:");
-		System.out.println(header);
 
 		/*
 		 * TODO: find a better way to copy then reading the entire array into a
@@ -53,38 +45,51 @@ public class ResponsePacket {
 		int lowerLimit = 0;
 		int length = (int) target.length();
 
-		makeHeaders(length);
-		textOut.write(header);
-		textOut.flush();
 
 		if (request.getHeader("Range") != null) {
+			header = "HTTP/1.1 206 Partial Content\r\n";
 			System.out.println("Range header:" + request.getHeader("Range"));
 			range = request.getHeader("Range").split("=")[1].split("-");
 			lowerLimit = Integer.parseInt(range[0]);
 			if (range.length > 1)
 				length = Integer.parseInt(range[1]) - lowerLimit;
-			System.out.println("\n\n");
+			else
+				length -= lowerLimit;
+			System.out.format("Computed range: %d-%d\n\n", lowerLimit,
+					lowerLimit + length - 1);
+		} else {
+			header = "HTTP/1.1 200 OK\r\n";
 		}
 
+		this.makeHeaders(lowerLimit, length, (int) target.length());
 		System.out.println(header);
+		textOut.write(header);
+		textOut.flush();
 
 		byte[] buffer = new byte[length];
 		try {
-			new FileInputStream(target).read(buffer, 0, length);
+			new FileInputStream(target).read(buffer, lowerLimit, length);
 			out.write(buffer, 0, length);
 			out.flush();
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+			System.out.println("Couldn't find file. Should have 404'd.");
+		} catch (SocketException e) {
+			System.out.println("Failed to write to socket: " + e.getMessage());
+			return false;
 		} catch (IOException e) {
-			System.out.println(e.toString());
-			System.out.println("Could not read/write file.");
-			return;
+			System.out.println("Could not read/write file: " + e.getMessage());
 		}
+		return true;
 	}
 
 	private void send404() {
 		header = "HTTP/1.1 404 Not Found\r\n";
-		makeHeaders(0);
+		String connection = request.getHeader("Connection");
+		if (connection != null && connection.equalsIgnoreCase("close"))
+			header += "Connection: Close\r\n";
+		else
+			header += "Connection: Keep-Alive\r\n";
+		header += "Date: " + new Date().toString() + "\r\n";
 
 		System.out.println("\n\nPrinting 404 header:");
 		System.out.println(header);
@@ -92,16 +97,40 @@ public class ResponsePacket {
 		textOut.flush();
 	}
 
+	private String getContentType(String filename) {
+		String ext = filename.substring(filename.lastIndexOf(".") + 1);
+		String type = "application/octet-stream";
+
+		// Parse out required types
+		if (ext.equals("txt"))
+			type = "text/plain";
+		else if (ext.equals("css"))
+			type = "text/css";
+		else if (ext.equals("htm") || ext.equals("html"))
+			type = "text/html";
+		else if (ext.equals("jpg") || ext.equals("jpeg"))
+			type = "image/jpeg";
+		else if (ext.equals("gif"))
+			type = "image/gif";
+		else if (ext.equals("png"))
+			type = "image/png";
+		else if (ext.equals("js"))
+			type = "application/js";
+		else if (ext.equals("webm"))
+			type = "video/webm";
+		else if (ext.equals("ogg") || ext.equals("ogv"))
+			type = "video/ogg";
+		else if (ext.equals("mp4"))
+			type = "video/mp4";
+		return type;
+	}
+
 	/*
 	 * Not sure if we need this, but I figured I'd mimic breaking down the other
 	 * packet
 	 */
-	private void makeHeaders(int length) {
-		/*
-		 * headers.put("Connection:", "Keep-Alive"); headers.put("Date:", new
-		 * Date().toString()); headers.put("Content-Length:",
-		 * Long.toString(target.length()));
-		 */
+	private void makeHeaders(int start, int quantity, int length) {
+		System.out.println("\n\nPrinting response header:");
 
 		String connection = request.getHeader("Connection");
 		if (connection != null && connection.equals("Close"))
@@ -111,13 +140,13 @@ public class ResponsePacket {
 		header += "Date: " + new Date().toString() + "\r\n";
 		header += "Cache-Control: max-age=0\r\n";
 		header += "Content-Length: " + length + "\r\n";
-		if (length > 0)
-			header += "X-Content-Duration:" + 30.0 + "\r\n";
-		header += "Content-Range: bytes 0-" + (length - 1) + "/" + length
+		// if (length > 0)
+		// header += "X-Content-Duration:" + 30.0 + "\r\n";
+		header += "Content-Range: bytes " + start + "-"
+				+ (start + quantity - 1) + "/" + length + "\r\n";
+		header += "Content-Type: " + this.getContentType(target.getName())
 				+ "\r\n";
-		header += "Content-Type: "
-				+ URLConnection.guessContentTypeFromName(target.getName())
-				+ "\r\n";
+		header += "Accept-Ranges: bytes\r\n";
 		header += "\r\n";
 	}
 

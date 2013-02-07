@@ -13,8 +13,8 @@ public class RequestPacket {
 
 	public RequestPacket(BufferedReader packet) throws DCException, IOException {
 		// First parse header line to get request
-		System.out.println("Now parsing packet...");
 		String line = packet.readLine();
+		System.out.println("\n\nNow parsing packet...");
 		System.out.println(line);
 
 		// Get request from middle field
@@ -22,7 +22,7 @@ public class RequestPacket {
 			throw new DCException();
 		String[] tokens = line.split(" ");
 		if (tokens.length < 3)
-			throw new IOException();
+			throw new IOException("Received invalid header.");
 		request = tokens[1];
 		if (request.equals("/"))
 			request = "index.html";
@@ -36,8 +36,6 @@ public class RequestPacket {
 			else
 				System.out.println(tokens);
 		}
-
-		System.out.println("Packet parsed.");
 	}
 
 	public String getRequest() {
