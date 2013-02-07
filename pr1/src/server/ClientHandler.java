@@ -38,12 +38,9 @@ public class ClientHandler implements Runnable {
 
 		while (listening) {
 			try {
-				System.out.println("Now wait for incoming from client " + id);
-				request = new RequestPacket(in);
-				System.out.println("Packet from client " + id + " parsed.");
-				ResponsePacket response = new ResponsePacket(request, out,
+				request = new RequestPacket(id, in);
+				ResponsePacket response = new ResponsePacket(id, request, out,
 						textOut);
-				System.out.println("Response to client " + id + " sent.");
 				if (!response.sendResponse())
 					listening = false;
 
@@ -56,7 +53,9 @@ public class ClientHandler implements Runnable {
 						id, e.getMessage());
 				listening = false;
 			} catch (DCException e) {
-				System.out.print("Client disconnected... ");
+				System.out.println("Disconnecting from client on timeout... ");
+				textOut.print("500 Internal Server Error\r\n");
+				textOut.print("Connection: Close\r\n\r\n");
 				listening = false;
 			}
 		}

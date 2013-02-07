@@ -18,10 +18,12 @@ public class ResponsePacket {
 	private PrintWriter textOut;
 	private File target;
 
+	private int clientId;
 	private String header;
 
-	public ResponsePacket(RequestPacket request, OutputStream output,
+	public ResponsePacket(int id, RequestPacket request, OutputStream output,
 			PrintWriter textoutput) {
+		this.clientId = id;
 		this.request = request;
 		this.out = output;
 		this.textOut = textoutput;
@@ -46,19 +48,17 @@ public class ResponsePacket {
 		int length = (int) target.length();
 
 
-		if (request.getHeader("Range") != null) {
+		if (request.getHeader("Range") == null) {
+			header = "HTTP/1.1 200 OK\r\n";
+		} else {
 			header = "HTTP/1.1 206 Partial Content\r\n";
-			System.out.println("Range header:" + request.getHeader("Range"));
 			range = request.getHeader("Range").split("=")[1].split("-");
 			lowerLimit = Integer.parseInt(range[0]);
 			if (range.length > 1)
-				length = Integer.parseInt(range[1]) - lowerLimit;
+				length = Integer.parseInt(range[1]) - lowerLimit + 1;
 			else
 				length -= lowerLimit;
-			System.out.format("Computed range: %d-%d\n\n", lowerLimit,
-					lowerLimit + length - 1);
-		} else {
-			header = "HTTP/1.1 200 OK\r\n";
+			System.out.format("Computed range: %d, %d\n\n", lowerLimit, length);
 		}
 
 		this.makeHeaders(lowerLimit, length, (int) target.length());
@@ -74,6 +74,7 @@ public class ResponsePacket {
 			out.write(buffer, 0, length);
 			out.flush();
 			file.close();
+			System.out.println("Wrote " + length + " bytes.");
 		} catch (FileNotFoundException e) {
 			System.out.println("Couldn't find file. Should have 404'd.");
 		} catch (IndexOutOfBoundsException e) {
@@ -96,7 +97,8 @@ public class ResponsePacket {
 			header += "Connection: Keep-Alive\r\n";
 		header += "Date: " + new Date().toString() + "\r\n";
 
-		System.out.println("\n\nPrinting 404 header:");
+		System.out.println("\n\nPrinting 404 header to client " + clientId
+				+ ":");
 		System.out.println(header);
 		textOut.write(header);
 		textOut.flush();
@@ -135,7 +137,8 @@ public class ResponsePacket {
 	 * packet
 	 */
 	private void makeHeaders(int start, int quantity, int length) {
-		System.out.println("\n\nPrinting response header:");
+		System.out.println("\n\nPrinting response header to client " + clientId
+				+ ":");
 
 		String connection = request.getHeader("Connection");
 		if (connection != null && connection.equals("Close"))
@@ -144,9 +147,10 @@ public class ResponsePacket {
 			header += "Connection: Keep-Alive\r\n";
 		header += "Date: " + new Date().toString() + "\r\n";
 		header += "Cache-Control: max-age=0\r\n";
-		header += "Content-Length: " + length + "\r\n";
-		// if (length > 0)
-		// header += "X-Content-Duration:" + 30.0 + "\r\n";
+		header += "Last-Modified: "
+				+ new Date(target.lastModified()).toString()
+				+ "\r\n";
+		header += "Content-Length: " + quantity + "\r\n";
 		header += "Content-Range: bytes " + start + "-"
 				+ (start + quantity - 1) + "/" + length + "\r\n";
 		header += "Content-Type: " + this.getContentType(target.getName())

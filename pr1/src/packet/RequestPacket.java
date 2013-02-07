@@ -8,13 +8,17 @@ import java.util.Map;
 import server.DCException;
 
 public class RequestPacket {
+	private int clientId;
 	private String request;
 	private Map<String, String> headers = new HashMap<String, String>();
 
-	public RequestPacket(BufferedReader packet) throws DCException, IOException {
+	public RequestPacket(int id, BufferedReader packet) throws DCException,
+			IOException {
 		// First parse header line to get request
+		clientId = id;
 		String line = packet.readLine();
-		System.out.println("\n\nNow parsing packet...");
+		System.out.println("\n\nNow parsing packet from client " + clientId
+				+ "...");
 		System.out.println(line);
 
 		// Get request from middle field
@@ -33,8 +37,6 @@ public class RequestPacket {
 			tokens = line.split(":");
 			if (tokens.length >= 2)
 				headers.put(tokens[0], tokens[1].trim());
-			else
-				System.out.println(tokens);
 		}
 	}
 
