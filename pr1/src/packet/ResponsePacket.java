@@ -68,11 +68,16 @@ public class ResponsePacket {
 
 		byte[] buffer = new byte[length];
 		try {
-			new FileInputStream(target).read(buffer, lowerLimit, length);
+			FileInputStream file = new FileInputStream(target);
+			file.skip(lowerLimit);
+			file.read(buffer, 0, length);
 			out.write(buffer, 0, length);
 			out.flush();
+			file.close();
 		} catch (FileNotFoundException e) {
 			System.out.println("Couldn't find file. Should have 404'd.");
+		} catch (IndexOutOfBoundsException e) {
+			System.out.println("Failed to copy to buffer: " + e.getMessage());
 		} catch (SocketException e) {
 			System.out.println("Failed to write to socket: " + e.getMessage());
 			return false;
