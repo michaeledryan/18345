@@ -1,4 +1,4 @@
-package packet;
+package edu.cmu.ece.packet;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -10,7 +10,10 @@ import java.net.SocketException;
 import java.util.Date;
 
 /**
- * Assembles a response to the GET request.
+ * Generates a response packet to be sent back to the client.
+ * 
+ * @author Michaels
+ * 
  */
 public class ResponsePacket {
 	private RequestPacket request;
@@ -21,6 +24,14 @@ public class ResponsePacket {
 	private int clientId;
 	private String header;
 
+	/**
+	 * Constructor. Sets necessary fields.
+	 * 
+	 * @param id
+	 * @param request
+	 * @param output
+	 * @param textoutput
+	 */
 	public ResponsePacket(int id, RequestPacket request, OutputStream output,
 			PrintWriter textoutput) {
 		this.clientId = id;
@@ -29,6 +40,12 @@ public class ResponsePacket {
 		this.textOut = textoutput;
 	}
 
+	/**
+	 * Sends a response back to the client, returning whether or not the
+	 * resposne was successful.
+	 * 
+	 * @returns whether or not a valid response is sent.
+	 */
 	public Boolean sendResponse() {
 		String filename = "www/" + request.getRequest();
 		target = new File(filename);
@@ -36,7 +53,6 @@ public class ResponsePacket {
 			this.send404();
 			return true;
 		}
-
 
 		/*
 		 * TODO: find a better way to copy then reading the entire array into a
@@ -47,7 +63,7 @@ public class ResponsePacket {
 		int lowerLimit = 0;
 		int length = (int) target.length();
 
-
+		// Send either 200 or 206 response
 		if (request.getHeader("Range") == null) {
 			header = "HTTP/1.1 200 OK\r\n";
 		} else {
@@ -66,6 +82,7 @@ public class ResponsePacket {
 		textOut.write(header);
 		textOut.flush();
 
+		// Write content to the client.
 		byte[] buffer = new byte[length];
 		try {
 			FileInputStream file = new FileInputStream(target);
@@ -88,6 +105,9 @@ public class ResponsePacket {
 		return true;
 	}
 
+	/**
+	 * Sends a 404 to the client.
+	 */
 	private void send404() {
 		header = "HTTP/1.1 404 Not Found\r\n";
 		String connection = request.getHeader("Connection");
@@ -104,6 +124,12 @@ public class ResponsePacket {
 		textOut.flush();
 	}
 
+	/**
+	 * Returns the valid html content type when given a filename.
+	 * 
+	 * @param filename the filename to be parsed
+	 * @return the html content type
+	 */
 	private String getContentType(String filename) {
 		String ext = filename.substring(filename.lastIndexOf(".") + 1);
 		String type = "application/octet-stream";
@@ -132,9 +158,12 @@ public class ResponsePacket {
 		return type;
 	}
 
-	/*
-	 * Not sure if we need this, but I figured I'd mimic breaking down the other
-	 * packet
+	/**
+	 * Composes headers for a response.
+	 * 
+	 * @param start The starting byte of the content
+	 * @param quantity The number of bytes being sent as content
+	 * @param length The length of the file being written
 	 */
 	private void makeHeaders(int start, int quantity, int length) {
 		System.out.println("\n\nPrinting response header to client " + clientId
@@ -148,8 +177,7 @@ public class ResponsePacket {
 		header += "Date: " + new Date().toString() + "\r\n";
 		header += "Cache-Control: max-age=0\r\n";
 		header += "Last-Modified: "
-				+ new Date(target.lastModified()).toString()
-				+ "\r\n";
+				+ new Date(target.lastModified()).toString() + "\r\n";
 		header += "Content-Length: " + quantity + "\r\n";
 		header += "Content-Range: bytes " + start + "-"
 				+ (start + quantity - 1) + "/" + length + "\r\n";
@@ -159,6 +187,11 @@ public class ResponsePacket {
 		header += "\r\n";
 	}
 
+	/**
+	 * Getter for the response's header.
+	 * 
+	 * @return the header.
+	 */
 	public String getHeader() {
 		return header;
 	}

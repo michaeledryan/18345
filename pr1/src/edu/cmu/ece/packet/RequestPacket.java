@@ -1,12 +1,19 @@
-package packet;
+package edu.cmu.ece.packet;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import server.DCException;
+import edu.cmu.ece.server.DCException;
 
+
+/**
+ * Parses an HTTP request. Creates a map of header fields to values.
+ * 
+ * @author Michaels
+ *
+ */
 public class RequestPacket {
 	private int clientId;
 	private String request;
@@ -14,14 +21,15 @@ public class RequestPacket {
 
 	public RequestPacket(int id, BufferedReader packet) throws DCException,
 			IOException {
-		// First parse header line to get request
+		
+		// First parse the header line to get the request
 		clientId = id;
 		String line = packet.readLine();
 		System.out.println("\n\nNow parsing packet from client " + clientId
 				+ "...");
 		System.out.println(line);
 
-		// Get request from middle field
+		// Get the request from the middle field
 		if (line == null)
 			throw new DCException();
 		String[] tokens = line.split(" ");
@@ -31,7 +39,7 @@ public class RequestPacket {
 		if (request.equals("/"))
 			request = "index.html";
 
-		// Then loop through header and add to map
+		// Loop through header, adding fields and values to map
 		while (!(line = packet.readLine()).equals("")) {
 			System.out.format("%s\n", line);
 			tokens = line.split(":");

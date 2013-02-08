@@ -1,4 +1,4 @@
-package server;
+package edu.cmu.ece.server;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -7,9 +7,16 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-import packet.RequestPacket;
-import packet.ResponsePacket;
+import edu.cmu.ece.packet.RequestPacket;
+import edu.cmu.ece.packet.ResponsePacket;
 
+
+/**
+ * Manages a connection to a given client.
+ * 
+ * @author Michaels
+ * 
+ */
 public class ClientHandler implements Runnable {
 
 	private static int clientCount = 0;
@@ -21,6 +28,15 @@ public class ClientHandler implements Runnable {
 	private OutputStream out;
 	private PrintWriter textOut;
 
+	/**
+	 * Constructor. Sets pertinent fields.
+	 * 
+	 * @param incoming
+	 *            the Socket connected to the client.yup
+	 * 
+	 * @throws IOException
+	 *             If input and output streasm could not be initialized.
+	 */
 	public ClientHandler(Socket incoming) throws IOException {
 		id = ++clientCount;
 		client = incoming;
@@ -29,21 +45,26 @@ public class ClientHandler implements Runnable {
 		textOut = new PrintWriter(out, true);
 	}
 
+	/**
+	 * Continually listens for the client, parses requests, and sends responses.
+	 */
 	@Override
 	public void run() {
 		System.out.format("Connected to client #%d\n", id);
 
-		// do {
 		RequestPacket request = null;
 
 		while (listening) {
 			try {
+				
+				// Parse request, send response
 				request = new RequestPacket(id, in);
 				ResponsePacket response = new ResponsePacket(id, request, out,
 						textOut);
 				if (!response.sendResponse())
 					listening = false;
 
+				// Check if we must close the connection.
 				String connection = request.getHeader("Connection");
 				if (connection != null && connection.equalsIgnoreCase("close"))
 					listening = false;
@@ -60,6 +81,7 @@ public class ClientHandler implements Runnable {
 			}
 		}
 
+		// Close connection
 		System.out.format("Goodbye client %d\n", id);
 		try {
 			in.close();

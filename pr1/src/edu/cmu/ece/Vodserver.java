@@ -2,15 +2,26 @@ package edu.cmu.ece;
 
 import java.io.File;
 
-import server.HTTPServer;
+import edu.cmu.ece.server.HTTPServer;
 
+
+/**
+ * Main class. Executes the program.
+ * 
+ * @author Michaels
+ */
 public class Vodserver {
 
+	/**
+	 * Main method. Sets up the server.
+	 * 
+	 * @param args
+	 *            port number
+	 */
 	public static void main(String[] args) {
 		int port = 18345;
 
-		File here = new File(".");
-		System.out.println(here.getAbsolutePath());
+		// Parse args
 
 		if (args.length > 0) {
 			if (args.length > 1) {
@@ -25,6 +36,7 @@ public class Vodserver {
 			}
 		}
 
+		// Run server
 		HTTPServer server = new HTTPServer(port);
 		server.run();
 	}
