@@ -10,7 +10,6 @@ import java.net.Socket;
 import edu.cmu.ece.packet.RequestPacket;
 import edu.cmu.ece.packet.ResponsePacket;
 
-
 /**
  * Manages a connection to a given client.
  * 
@@ -56,7 +55,7 @@ public class ClientHandler implements Runnable {
 
 		while (listening) {
 			try {
-				
+
 				// Parse request, send response
 				request = new RequestPacket(id, in);
 				ResponsePacket response = new ResponsePacket(id, request, out,

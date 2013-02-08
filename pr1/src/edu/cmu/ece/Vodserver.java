@@ -1,9 +1,6 @@
 package edu.cmu.ece;
 
-import java.io.File;
-
 import edu.cmu.ece.server.HTTPServer;
-
 
 /**
  * Main class. Executes the program.

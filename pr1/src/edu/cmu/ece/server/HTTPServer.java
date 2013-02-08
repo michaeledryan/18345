@@ -8,7 +8,7 @@ import java.net.Socket;
  * Main thread that spins off ClientHandlers to deal with connections.
  * 
  * @author Michaels
- *
+ * 
  */
 public class HTTPServer implements Runnable {
 
@@ -18,7 +18,8 @@ public class HTTPServer implements Runnable {
 	/**
 	 * Constructor
 	 * 
-	 * @param port the port on which we listen
+	 * @param port
+	 *            the port on which we listen
 	 */
 	public HTTPServer(int port) {
 		portNum = port;
