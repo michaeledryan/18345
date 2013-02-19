@@ -23,6 +23,7 @@ public class ResponsePacket {
 
 	private int clientId;
 	private String header;
+	private static int BUF_MAX = 1 << 10;
 
 	/**
 	 * Constructor. Sets necessary fields.
@@ -69,19 +70,17 @@ public class ResponsePacket {
 				length = Integer.parseInt(range[1]) - lowerLimit + 1;
 			else
 				length -= lowerLimit;
-			System.out.format("Computed range: %d, %d\n\n", lowerLimit, length);
 		}
 
 		// Generate and write headers to client.
 		this.makeHeaders(lowerLimit, length, (int) target.length());
-		System.out.println(header);
 		textOut.write(header);
 		textOut.flush();
 
 		// Write content to the client. Break up the content to avoid OOMing
 		// over large loads.
 
-		int currentLength = (length < 1 << 20) ? length : 1 << 20;
+		int currentLength = (length < BUF_MAX) ? length : BUF_MAX;
 		int bytesRead = 0;
 		byte[] buffer = new byte[currentLength];
 
@@ -102,7 +101,6 @@ public class ResponsePacket {
 				file.read(buffer, 0, currentLength);
 				out.write(buffer, 0, currentLength);
 				bytesRead += currentLength;
-				System.out.println("Wrote " + currentLength + " bytes.");
 				if (length - bytesRead < currentLength)
 					currentLength = length - bytesRead;
 			} catch (FileNotFoundException e) {
@@ -143,9 +141,6 @@ public class ResponsePacket {
 			header += "Connection: Keep-Alive\r\n";
 		header += "Date: " + new Date().toString() + "\r\n";
 
-		System.out.println("\n\nPrinting 404 header to client " + clientId
-				+ ":");
-		System.out.println(header);
 		textOut.write(header);
 		textOut.flush();
 	}
@@ -196,9 +191,7 @@ public class ResponsePacket {
 	 *            The length of the file being written
 	 */
 	private void makeHeaders(int start, int quantity, int length) {
-		System.out.println("\n\nPrinting response header to client " + clientId
-				+ ":");
-
+		
 		String connection = request.getHeader("Connection");
 		if (connection != null && connection.equals("Close"))
 			header += "Connection: Close\r\n";
