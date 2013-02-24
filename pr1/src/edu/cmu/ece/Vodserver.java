@@ -7,7 +7,7 @@ import edu.cmu.ece.server.HTTPServer;
  * 
  * @author Michaels
  */
-public class Vodserver {
+public class VodServer {
 
 	/**
 	 * Main method. Sets up the server.
