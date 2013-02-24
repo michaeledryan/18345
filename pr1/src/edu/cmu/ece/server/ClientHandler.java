@@ -10,7 +10,6 @@ import java.net.Socket;
 import edu.cmu.ece.packet.RequestPacket;
 import edu.cmu.ece.packet.ResponsePacket;
 
-
 /**
  * Manages a connection to a given client.
  * 
@@ -50,13 +49,11 @@ public class ClientHandler implements Runnable {
 	 */
 	@Override
 	public void run() {
-		System.out.format("Connected to client #%d\n", id);
-
 		RequestPacket request = null;
 
 		while (listening) {
 			try {
-				
+
 				// Parse request, send response
 				request = new RequestPacket(id, in);
 				ResponsePacket response = new ResponsePacket(id, request, out,
@@ -74,7 +71,6 @@ public class ClientHandler implements Runnable {
 						id, e.getMessage());
 				listening = false;
 			} catch (DCException e) {
-				System.out.println("Disconnecting from client on timeout... ");
 				textOut.print("500 Internal Server Error\r\n");
 				textOut.print("Connection: Close\r\n\r\n");
 				listening = false;
@@ -82,7 +78,6 @@ public class ClientHandler implements Runnable {
 		}
 
 		// Close connection
-		System.out.format("Goodbye client %d\n", id);
 		try {
 			in.close();
 			textOut.close();

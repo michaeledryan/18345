@@ -23,6 +23,7 @@ public class ResponsePacket {
 
 	private int clientId;
 	private String header;
+	private static int BUF_MAX = 1 << 10;
 
 	/**
 	 * Constructor. Sets necessary fields.
@@ -47,17 +48,12 @@ public class ResponsePacket {
 	 * @returns whether or not a valid response is sent.
 	 */
 	public Boolean sendResponse() {
-		String filename = "www/" + request.getRequest();
+		String filename = "content/" + request.getRequest();
 		target = new File(filename);
 		if (!target.exists()) {
 			this.send404();
 			return true;
 		}
-
-		/*
-		 * TODO: find a better way to copy then reading the entire array into a
-		 * buffer then pushing back out
-		 */
 
 		String[] range;
 		int lowerLimit = 0;
@@ -74,34 +70,62 @@ public class ResponsePacket {
 				length = Integer.parseInt(range[1]) - lowerLimit + 1;
 			else
 				length -= lowerLimit;
-			System.out.format("Computed range: %d, %d\n\n", lowerLimit, length);
 		}
 
+		// Generate and write headers to client.
 		this.makeHeaders(lowerLimit, length, (int) target.length());
-		System.out.println(header);
 		textOut.write(header);
 		textOut.flush();
 
-		// Write content to the client.
-		byte[] buffer = new byte[length];
+		// Write content to the client. Break up the content to avoid OOMing
+		// over large loads.
+
+		int currentLength = (length < BUF_MAX) ? length : BUF_MAX;
+		int bytesRead = 0;
+		byte[] buffer = new byte[currentLength];
+
+		FileInputStream file = null;
 		try {
-			FileInputStream file = new FileInputStream(target);
+			file = new FileInputStream(target);
 			file.skip(lowerLimit);
-			file.read(buffer, 0, length);
-			out.write(buffer, 0, length);
-			out.flush();
-			file.close();
-			System.out.println("Wrote " + length + " bytes.");
-		} catch (FileNotFoundException e) {
+		} catch (FileNotFoundException e1) {
 			System.out.println("Couldn't find file. Should have 404'd.");
-		} catch (IndexOutOfBoundsException e) {
-			System.out.println("Failed to copy to buffer: " + e.getMessage());
-		} catch (SocketException e) {
-			System.out.println("Failed to write to socket: " + e.getMessage());
-			return false;
 		} catch (IOException e) {
 			System.out.println("Could not read/write file: " + e.getMessage());
 		}
+
+		// Read from file, write to client. Smallish buffer size keeps memory
+		// use reasonable.
+		while (bytesRead < length) {
+			try {
+				file.read(buffer, 0, currentLength);
+				out.write(buffer, 0, currentLength);
+				bytesRead += currentLength;
+				if (length - bytesRead < currentLength)
+					currentLength = length - bytesRead;
+			} catch (FileNotFoundException e) {
+				System.out.println("Couldn't find file. Should have 404'd.");
+			} catch (IndexOutOfBoundsException e) {
+				System.out.println("Failed to copy to buffer: "
+						+ e.getMessage());
+			} catch (SocketException e) {
+				System.out.println("Failed to write to socket: "
+						+ e.getMessage());
+				return false;
+			} catch (IOException e) {
+				System.out.println("Could not read/write file: "
+						+ e.getMessage());
+			}
+		}
+
+		// Close file and output stream.
+		try {
+			out.flush();
+			file.close();
+		} catch (IOException e) {
+			System.out.println("Could not read/write file: " + e.getMessage());
+		}
+
 		return true;
 	}
 
@@ -117,9 +141,6 @@ public class ResponsePacket {
 			header += "Connection: Keep-Alive\r\n";
 		header += "Date: " + new Date().toString() + "\r\n";
 
-		System.out.println("\n\nPrinting 404 header to client " + clientId
-				+ ":");
-		System.out.println(header);
 		textOut.write(header);
 		textOut.flush();
 	}
@@ -127,7 +148,8 @@ public class ResponsePacket {
 	/**
 	 * Returns the valid html content type when given a filename.
 	 * 
-	 * @param filename the filename to be parsed
+	 * @param filename
+	 *            the filename to be parsed
 	 * @return the html content type
 	 */
 	private String getContentType(String filename) {
@@ -161,14 +183,15 @@ public class ResponsePacket {
 	/**
 	 * Composes headers for a response.
 	 * 
-	 * @param start The starting byte of the content
-	 * @param quantity The number of bytes being sent as content
-	 * @param length The length of the file being written
+	 * @param start
+	 *            The starting byte of the content
+	 * @param quantity
+	 *            The number of bytes being sent as content
+	 * @param length
+	 *            The length of the file being written
 	 */
 	private void makeHeaders(int start, int quantity, int length) {
-		System.out.println("\n\nPrinting response header to client " + clientId
-				+ ":");
-
+		
 		String connection = request.getHeader("Connection");
 		if (connection != null && connection.equals("Close"))
 			header += "Connection: Close\r\n";

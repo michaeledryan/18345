@@ -7,12 +7,11 @@ import java.util.Map;
 
 import edu.cmu.ece.server.DCException;
 
-
 /**
  * Parses an HTTP request. Creates a map of header fields to values.
  * 
  * @author Michaels
- *
+ * 
  */
 public class RequestPacket {
 	private int clientId;
@@ -21,13 +20,10 @@ public class RequestPacket {
 
 	public RequestPacket(int id, BufferedReader packet) throws DCException,
 			IOException {
-		
+
 		// First parse the header line to get the request
 		clientId = id;
 		String line = packet.readLine();
-		System.out.println("\n\nNow parsing packet from client " + clientId
-				+ "...");
-		System.out.println(line);
 
 		// Get the request from the middle field
 		if (line == null)
@@ -41,7 +37,6 @@ public class RequestPacket {
 
 		// Loop through header, adding fields and values to map
 		while (!(line = packet.readLine()).equals("")) {
-			System.out.format("%s\n", line);
 			tokens = line.split(":");
 			if (tokens.length >= 2)
 				headers.put(tokens[0], tokens[1].trim());
