@@ -1,4 +1,4 @@
-package edu.cmu.ece.server;
+package edu.cmu.ece.frontend;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -8,7 +8,6 @@ import java.io.PrintWriter;
 import java.net.Socket;
 
 import edu.cmu.ece.packet.RequestPacket;
-import edu.cmu.ece.packet.ResponsePacket;
 
 /**
  * Manages a connection to a given client.
@@ -56,10 +55,10 @@ public class ClientHandler implements Runnable {
 
 				// Parse request, send response
 				request = new RequestPacket(id, in);
-				ResponsePacket response = new ResponsePacket(id, request, out,
+				RequestHandler responder = new RequestHandler(id, request,
+						out,
 						textOut);
-				if (!response.sendResponse())
-					listening = false;
+				responder.determineRequest();
 
 				// Check if we must close the connection.
 				String connection = request.getHeader("Connection");

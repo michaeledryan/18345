@@ -1,4 +1,4 @@
-package edu.cmu.ece.server;
+package edu.cmu.ece.frontend;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -10,7 +10,7 @@ import java.net.Socket;
  * @author Michaels
  * 
  */
-public class HTTPServer implements Runnable {
+public class FrontendServer implements Runnable {
 
 	private int portNum;
 	private ServerSocket socket;
@@ -21,7 +21,7 @@ public class HTTPServer implements Runnable {
 	 * @param port
 	 *            the port on which we listen
 	 */
-	public HTTPServer(int port) {
+	public FrontendServer(int port) {
 		portNum = port;
 	}
 

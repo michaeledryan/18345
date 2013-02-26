@@ -1,6 +1,6 @@
 package edu.cmu.ece;
 
-import edu.cmu.ece.server.HTTPServer;
+import edu.cmu.ece.frontend.FrontendServer;
 
 /**
  * Main class. Executes the program.
@@ -16,17 +16,18 @@ public class VodServer {
 	 *            port number
 	 */
 	public static void main(String[] args) {
-		int port = 18345;
+		int httpPort = 18345;
+		int udpPort = 18346;
 
 		// Parse args
-
-		if (args.length > 0) {
-			if (args.length > 1) {
+		if (args.length > 1) {
+			if (args.length > 2) {
 				System.out.println("Discarding extra args.");
 			}
 
 			try {
-				port = Integer.parseInt(args[0]);
+				httpPort = Integer.parseInt(args[0]);
+				udpPort = Integer.parseInt(args[1]);
 			} catch (NumberFormatException e) {
 				System.out.println("Port must be an integer");
 				System.exit(1);
@@ -34,7 +35,7 @@ public class VodServer {
 		}
 
 		// Run server
-		HTTPServer server = new HTTPServer(port);
+		FrontendServer server = new FrontendServer(httpPort);
 		server.run();
 	}
 
