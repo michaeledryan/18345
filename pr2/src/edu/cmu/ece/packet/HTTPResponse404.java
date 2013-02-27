@@ -3,20 +3,20 @@ package edu.cmu.ece.packet;
 import java.io.PrintWriter;
 import java.util.Date;
 
-public class Response404 {
+public class HTTPResponse404 {
 	/**
 	 * Sends a 404 to the client.
 	 * 
 	 * @return
 	 */
-	public static void send404(RequestPacket request, PrintWriter out) {
+	public static void send404(HTTPRequestPacket request, PrintWriter out) {
 		String header = "HTTP/1.1 404 Not Found\r\n";
 		String connection = request.getHeader("Connection");
 		if (connection != null && connection.equalsIgnoreCase("close"))
 			header += "Connection: Close\r\n";
 		else
 			header += "Connection: Keep-Alive\r\n";
-		header += "Date: " + ResponseHeader.formatDate(new Date()) + "\r\n";
+		header += "Date: " + HTTPResponseHeader.formatDate(new Date()) + "\r\n";
 
 		// Create simple 404 page
 		String page = "<html><head><title>404 Not Found</title></head>"

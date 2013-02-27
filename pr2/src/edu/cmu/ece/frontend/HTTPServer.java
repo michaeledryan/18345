@@ -4,15 +4,18 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+import edu.cmu.ece.backend.UDPManager;
+
 /**
  * Main thread that spins off ClientHandlers to deal with connections.
  * 
  * @author Michaels
  * 
  */
-public class FrontendServer implements Runnable {
+public class HTTPServer implements Runnable {
 
 	private int portNum;
+	private UDPManager udp;
 	private ServerSocket socket;
 
 	/**
@@ -21,8 +24,9 @@ public class FrontendServer implements Runnable {
 	 * @param port
 	 *            the port on which we listen
 	 */
-	public FrontendServer(int port) {
+	public HTTPServer(int port, UDPManager udp_man) {
 		portNum = port;
+		udp = udp_man;
 	}
 
 	/**
@@ -33,9 +37,10 @@ public class FrontendServer implements Runnable {
 		// open a socket
 		try {
 			socket = new ServerSocket(portNum);
-			System.out.format("Now listening on port %d\n", portNum);
+			System.out.format("Now listening for HTTP on port %d\n", portNum);
 		} catch (IOException e) {
-			System.out.format("Could not listen on port %d\n", portNum);
+			System.out
+					.format("Could not listen for HTTP on port %d\n", portNum);
 			System.exit(-1);
 		}
 
@@ -45,10 +50,10 @@ public class FrontendServer implements Runnable {
 			ClientHandler handle;
 			try {
 				client = socket.accept();
-				handle = new ClientHandler(client);
+				handle = new ClientHandler(client, udp);
 				new Thread(handle).start();
 			} catch (IOException e) {
-				System.out.println("Error connecting to client");
+				System.out.println("Error connecting to client on HTTP.");
 			}
 		}
 	}

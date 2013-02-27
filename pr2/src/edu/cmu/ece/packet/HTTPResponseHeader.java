@@ -6,7 +6,7 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
-public class ResponseHeader {
+public class HTTPResponseHeader {
 	/**
 	 * Returns the valid html content type when given a filename.
 	 * 
@@ -62,7 +62,7 @@ public class ResponseHeader {
 	 * @param length
 	 *            The length of the file being written
 	 */
-	public static String makeHeader(File target, RequestPacket request) {
+	public static String makeHeader(File target, HTTPRequestPacket request) {
 		String header;
 		
 		// Determine header type

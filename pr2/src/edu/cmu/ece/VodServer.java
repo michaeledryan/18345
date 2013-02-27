@@ -1,6 +1,7 @@
 package edu.cmu.ece;
 
-import edu.cmu.ece.frontend.FrontendServer;
+import edu.cmu.ece.backend.UDPManager;
+import edu.cmu.ece.frontend.HTTPServer;
 
 /**
  * Main class. Executes the program.
@@ -34,9 +35,11 @@ public class VodServer {
 			}
 		}
 
-		// Run server
-		FrontendServer server = new FrontendServer(httpPort);
-		server.run();
+		// Run servers on their own threads
+		UDPManager udp = new UDPManager(udpPort);
+		HTTPServer http = new HTTPServer(httpPort, udp);
+		new Thread(udp).start();
+		new Thread(http).start();
 	}
 
 }

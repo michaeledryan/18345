@@ -14,8 +14,7 @@ import edu.cmu.ece.frontend.DCException;
  * @author Michaels
  * 
  */
-public class RequestPacket {
-	private int clientId;
+public class HTTPRequestPacket {
 	private String request;
 	private Map<String, String> headers = new HashMap<String, String>();
 
@@ -24,11 +23,10 @@ public class RequestPacket {
 	private int[] upperRanges;
 	private int totalRangeLength;
 
-	public RequestPacket(int id, BufferedReader packet) throws DCException,
+	public HTTPRequestPacket(BufferedReader packet) throws DCException,
 			IOException {
 
 		// First parse the header line to get the request
-		clientId = id;
 		String line = packet.readLine();
 
 		// Get the request from the middle field

@@ -10,7 +10,7 @@ import java.net.SocketException;
 public class ResponseFileData {
 	private static int BUF_MAX = 1 << 10;
 
-	public static void sendFile(File target, RequestPacket request,
+	public static void sendFile(File target, HTTPRequestPacket request,
 			OutputStream out) {
 		// Store ranges to send as array of lower/upper bounds
 		request.parseRanges(target);

@@ -1,13 +1,15 @@
 package edu.cmu.ece.frontend;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 
-import edu.cmu.ece.packet.RequestPacket;
-import edu.cmu.ece.packet.Response404;
+import edu.cmu.ece.backend.UDPManager;
+import edu.cmu.ece.packet.HTTPRequestPacket;
+import edu.cmu.ece.packet.HTTPResponse404;
+import edu.cmu.ece.packet.HTTPResponseHeader;
 import edu.cmu.ece.packet.ResponseFileData;
-import edu.cmu.ece.packet.ResponseHeader;
 
 /**
  * Generates a response packet to be sent back to the client.
@@ -16,12 +18,14 @@ import edu.cmu.ece.packet.ResponseHeader;
  * 
  */
 public class RequestHandler {
-	private RequestPacket request;
+	@SuppressWarnings("unused")
+	private UDPManager udp;
+	private HTTPRequestPacket request;
 	private OutputStream out;
 	private PrintWriter textOut;
 
+	@SuppressWarnings("unused")
 	private int clientId;
-	private String header;
 
 	/**
 	 * Constructor. Sets necessary fields.
@@ -31,9 +35,11 @@ public class RequestHandler {
 	 * @param output
 	 * @param textoutput
 	 */
-	public RequestHandler(int id, RequestPacket request, OutputStream output,
-			PrintWriter textoutput) {
+	public RequestHandler(int id, UDPManager udp_man,
+			HTTPRequestPacket request,
+			OutputStream output, PrintWriter textoutput) {
 		this.clientId = id;
+		this.udp = udp_man;
 		this.request = request;
 		this.out = output;
 		this.textOut = textoutput;
@@ -72,7 +78,7 @@ public class RequestHandler {
 				this.handleRemoteRequest(file);
 				return;
 			} else {
-				Response404.send404(request, textOut);
+				HTTPResponse404.send404(request, textOut);
 				return;
 			}
 		}
@@ -85,8 +91,18 @@ public class RequestHandler {
 			this.handleLocalRequest(target);
 			return;
 		} else {
-			Response404.send404(request, textOut);
+			HTTPResponse404.send404(request, textOut);
 			return;
+		}
+	}
+
+	public void mirrorPacketToClient(byte[] buffer, int length) {
+		System.out.println("Mirroring buffer to client.");
+		try {
+			out.write(buffer, 0, length);
+			out.flush();
+		} catch (IOException e) {
+			System.out.println("Could not read/write file: " + e.getMessage());
 		}
 	}
 
@@ -103,6 +119,7 @@ public class RequestHandler {
 				path = keyValue[1];
 			else if (keyValue[0].equals("host"))
 				host = keyValue[1];
+
 			else if (keyValue[0].equals("port"))
 				port = keyValue[1];
 			else if (keyValue[0].equals("rate"))
@@ -111,7 +128,8 @@ public class RequestHandler {
 		System.out.println("Config request with parameters:");
 		System.out.println("File " + path + " can be found on " + host + ":"
 				+ port + " with bitrate " + rate + ".");
-		// Add to routing table now...
+
+		// TODO: actually generate a routing table
 	}
 
 	private void handlePeerConfig(String parameters) {
@@ -121,16 +139,24 @@ public class RequestHandler {
 		// TODO: figure out how to implement bitrate stuff
 	}
 
-	private void handleRemoteRequest(String file) {
-		// TODO: handle remote requests
+	private void handleRemoteRequest(String target) {
+		/*
+		 * TODO: look up in the routing table, and either 404 or send a UDP
+		 * request to the backend server. Let the UDP server at the other end
+		 * construct the HTTP header as well, since we don't know things like
+		 * file type and total file length
+		 * 
+		 * Once the request is sent we can just stop and wait for the UDP
+		 * listener to receive an incoming packet and mirror it blindly to the
+		 * client.
+		 */
 	}
 
-	public void handleLocalRequest(File target) {
+	private void handleLocalRequest(File target) {
 		// Generate and write headers to client.
-		String header = ResponseHeader.makeHeader(target, request);
+		String header = HTTPResponseHeader.makeHeader(target, request);
 		textOut.write(header);
 		textOut.flush();
-		System.out.println(header);
 
 		ResponseFileData.sendFile(target, request, out);
 	}
