@@ -90,7 +90,7 @@ public class RoutingTable {
 	/**
 	 * Gets PeerData givena file path. 
 	 */
-	public PeerData getIP(String path) {
+	public PeerData getPeerData(String path) {
 		return fileNamesToPeerData.get(path);
 	}
 

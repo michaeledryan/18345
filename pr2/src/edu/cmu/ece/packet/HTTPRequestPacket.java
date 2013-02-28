@@ -16,6 +16,7 @@ import edu.cmu.ece.DCException;
 public class HTTPRequestPacket {
 	private String request;
 	private Map<String, String> headers = new HashMap<String, String>();
+	private String headerString;
 
 	private String fullRangeString;
 	private int[] lowerRanges;
@@ -39,10 +40,12 @@ public class HTTPRequestPacket {
 			request = "index.html";
 
 		// Loop through header, adding fields and values to map
+		headerString = "";
 		while (!(line = packet.readLine()).equals("")) {
 			tokens = line.split(":");
 			if (tokens.length >= 2)
 				headers.put(tokens[0], tokens[1].trim());
+			headerString += line;
 		}
 	}
 
@@ -52,6 +55,10 @@ public class HTTPRequestPacket {
 
 	public String getHeader(String key) {
 		return headers.get(key);
+	}
+
+	public String getFullHeader() {
+		return headerString;
 	}
 
 	/* get the range query vales */

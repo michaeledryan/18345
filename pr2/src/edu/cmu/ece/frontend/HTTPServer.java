@@ -5,7 +5,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 import edu.cmu.ece.backend.RoutingTable;
-import edu.cmu.ece.backend.UDPManager;
 
 /**
  * Main thread that spins off ClientHandlers to deal with connections.
@@ -17,7 +16,6 @@ public class HTTPServer implements Runnable {
 
 	private int portNum;
 	private int clientID = 0;
-	private static UDPManager udp = UDPManager.getInstance();
 	private ServerSocket socket;
 
 	/**

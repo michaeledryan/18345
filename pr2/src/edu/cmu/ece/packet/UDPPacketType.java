@@ -6,7 +6,7 @@ package edu.cmu.ece.packet;
  * understand java enums. Feel free to change it, please.
  */
 public enum UDPPacketType {
-	NONE(0), REQUEST(1), DATA(2);
+	NONE(0), REQUEST(1), DATA(2), CONFIG(3);
 	
 	private final int value;
     private UDPPacketType(int value) {
@@ -19,6 +19,8 @@ public enum UDPPacketType {
 			return UDPPacketType.REQUEST;
 		case 2:
 			return UDPPacketType.DATA;
+		case 3:
+			return UDPPacketType.CONFIG;
 		default:
 			return UDPPacketType.NONE;
 		}

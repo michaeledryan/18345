@@ -18,7 +18,7 @@ public class PeerData {
 	}
 	
 	public int getPort() {
-		return rate;
+		return port;
 	}
 	
 	public String getIP() {

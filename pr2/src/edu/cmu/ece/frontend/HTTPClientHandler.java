@@ -8,7 +8,6 @@ import java.io.PrintWriter;
 import java.net.Socket;
 
 import edu.cmu.ece.DCException;
-import edu.cmu.ece.backend.UDPManager;
 import edu.cmu.ece.packet.HTTPRequestPacket;
 
 /**
@@ -23,7 +22,6 @@ public class HTTPClientHandler implements Runnable {
 	private int id;
 	private boolean listening = true;
 
-	private static UDPManager udp = UDPManager.getInstance();
 	private Socket client;
 	private BufferedReader in;
 	private OutputStream out;
@@ -97,4 +95,16 @@ public class HTTPClientHandler implements Runnable {
 	public int getClientID() {
 		return this.id;
 	}
+
+	/* Used by UDP responses to mirror data to the original client over TCP */
+	public void mirrorPacketToClient(byte[] buffer, int length) {
+		System.out.println("Mirroring buffer to client.");
+		try {
+			out.write(buffer, 0, length);
+			out.flush();
+		} catch (IOException e) {
+			System.out.println("Could not read/write file: " + e.getMessage());
+		}
+	}
+
 }

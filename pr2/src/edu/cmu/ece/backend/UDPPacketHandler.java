@@ -2,11 +2,12 @@ package edu.cmu.ece.backend;
 
 import java.net.DatagramPacket;
 
+import edu.cmu.ece.frontend.HTTPClientHandler;
 import edu.cmu.ece.packet.UDPPacket;
 
 public class UDPPacketHandler implements Runnable {
 
-	private static UDPManager udp = UDPManager.getInstance();
+	private static RoutingTable router = RoutingTable.getInstance();
 	private UDPPacket packet;
 
 	public UDPPacketHandler(DatagramPacket incoming) {
@@ -28,12 +29,21 @@ public class UDPPacketHandler implements Runnable {
 		case REQUEST:
 			// Trigger a UDPRequestHandler to find the file and send it out
 			return;
+
 		case DATA:
-			// Read client directory to get clienthandler, then pass data to
-			// that client
+			// Get the client that requested the packet and give him the data
+			// to respond over TCP
+			HTTPClientHandler client = router
+					.getClientHandler(packet.getClientID());
+			byte[] packetData = packet.getData();
+			client.mirrorPacketToClient(packetData, packetData.length);
 			return;
+
+		case CONFIG:
+			// TODO: I have no idea. For now, fall through to default
+
 		default:
-			// Do nothing
+			// Do nothing - ignore invalid requests
 			return;
 		}
 	}

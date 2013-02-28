@@ -1,9 +1,9 @@
 package edu.cmu.ece.frontend;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.UnknownHostException;
 
 import edu.cmu.ece.backend.PeerData;
 import edu.cmu.ece.backend.RoutingTable;
@@ -12,6 +12,8 @@ import edu.cmu.ece.packet.HTTPRequestPacket;
 import edu.cmu.ece.packet.HTTPResponse404;
 import edu.cmu.ece.packet.HTTPResponseHeader;
 import edu.cmu.ece.packet.ResponseFileData;
+import edu.cmu.ece.packet.UDPPacket;
+import edu.cmu.ece.packet.UDPPacketType;
 
 /**
  * Generates a response packet to be sent back to the client.
@@ -20,14 +22,13 @@ import edu.cmu.ece.packet.ResponseFileData;
  * 
  */
 public class HTTPRequestHandler {
-	@SuppressWarnings("unused")
 	private UDPManager udp = UDPManager.getInstance();
+	private RoutingTable router = RoutingTable.getInstance();
 	private HTTPRequestPacket request;
 	private OutputStream out;
 	private PrintWriter textOut;
 
-	@SuppressWarnings("unused")
-	private int clientId;
+	private int clientID;
 
 	/**
 	 * Constructor. Sets necessary fields.
@@ -39,7 +40,7 @@ public class HTTPRequestHandler {
 	 */
 	public HTTPRequestHandler(int id, HTTPRequestPacket request,
 			OutputStream output, PrintWriter textoutput) {
-		this.clientId = id;
+		this.clientID = id;
 		this.request = request;
 		this.out = output;
 		this.textOut = textoutput;
@@ -95,16 +96,6 @@ public class HTTPRequestHandler {
 		}
 	}
 
-	public void mirrorPacketToClient(byte[] buffer, int length) {
-		System.out.println("Mirroring buffer to client.");
-		try {
-			out.write(buffer, 0, length);
-			out.flush();
-		} catch (IOException e) {
-			System.out.println("Could not read/write file: " + e.getMessage());
-		}
-	}
-
 	private void addToRoutingTable(String parameters) {
 		String[] paramList = parameters.split("&");
 		String path = "";
@@ -128,8 +119,7 @@ public class HTTPRequestHandler {
 		System.out.println("File " + path + " can be found on " + host + ":"
 				+ port + " with bitrate " + rate + ".");
 
-		RoutingTable.getInstance().addtofileNames(
-				path,
+		router.addtofileNames(path,
 				new PeerData(host, Integer.parseInt(port), Integer
 						.parseInt(rate)));
 		// Adds parameters to the Routing table.
@@ -144,21 +134,29 @@ public class HTTPRequestHandler {
 
 	private void handleRemoteRequest(String target) {
 		/*
-		 * TODO: look up in the routing table, and either 404 or send a UDP
-		 * request to the backend server. Let the UDP server at the other end
-		 * construct the HTTP header as well, since we don't know things like
-		 * file type and total file length
-		 * 
-		 * Once the request is sent we can just stop and wait for the UDP
-		 * listener to receive an incoming packet and mirror it blindly to the
-		 * client.
+		 * Look up file in the routing table. If it isn't found, send a 404
 		 */
+		PeerData remote = router.getPeerData(target);
+		if (remote == null)
+			HTTPResponse404.send404(request, textOut);
 		
-		// We should never 404 here.
-		
-		//byte[] response = UDPManager.getFile(target);
-		//mirrorPacketToClient(response, response.length);
-		
+		// Send UDP request packet with full HTTP Header copied in
+		try {
+			String requestString = "GET " + target + " HTTP/1.1\r\n"
+					+ request.getFullHeader();
+			UDPPacket backendRequest = new UDPPacket(clientID, remote.getIP(),
+					remote.getPort(), requestString.getBytes(),
+					UDPPacketType.REQUEST);
+			udp.sendPacket(backendRequest.getPacket());
+		} catch (UnknownHostException e) {
+			System.out.println("Invalid host provided in routing table.");
+		}
+
+		/*
+		 * Once the request is sent we can just stop and wait for the UDP
+		 * listener to receive an incoming packet. It will pass it directly to
+		 * ClientHandler to mirror over TCP
+		 */
 	}
 
 	private void handleLocalRequest(File target) {
