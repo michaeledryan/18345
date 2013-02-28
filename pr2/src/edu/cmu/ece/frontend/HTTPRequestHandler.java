@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 
+import edu.cmu.ece.backend.PeerData;
+import edu.cmu.ece.backend.RoutingTable;
 import edu.cmu.ece.backend.UDPManager;
 import edu.cmu.ece.packet.HTTPRequestPacket;
 import edu.cmu.ece.packet.HTTPResponse404;
@@ -19,7 +21,7 @@ import edu.cmu.ece.packet.ResponseFileData;
  */
 public class HTTPRequestHandler {
 	@SuppressWarnings("unused")
-	private UDPManager udp;
+	private UDPManager udp = UDPManager.getInstance();
 	private HTTPRequestPacket request;
 	private OutputStream out;
 	private PrintWriter textOut;
@@ -35,11 +37,9 @@ public class HTTPRequestHandler {
 	 * @param output
 	 * @param textoutput
 	 */
-	public HTTPRequestHandler(int id, UDPManager udp_man,
-			HTTPRequestPacket request,
+	public HTTPRequestHandler(int id, HTTPRequestPacket request,
 			OutputStream output, PrintWriter textoutput) {
 		this.clientId = id;
-		this.udp = udp_man;
 		this.request = request;
 		this.out = output;
 		this.textOut = textoutput;
@@ -49,7 +49,6 @@ public class HTTPRequestHandler {
 	 * Determine what the client has requested - either a local file, a file on
 	 * one of our backend servers, or a modification to the routing table
 	 */
-	@SuppressWarnings("unused")
 	public void determineRequest() {
 		// First check if we have a remote request
 		String requested = request.getRequest();
@@ -74,7 +73,7 @@ public class HTTPRequestHandler {
 			// the request or response with a 404
 			String file = requested.substring(10);
 			System.out.println("Remote file request for: " + file);
-			if (false) { // (isInRoutingTable(file)) {
+			if (RoutingTable.getInstance().checkPath(file)) {
 				this.handleRemoteRequest(file);
 				return;
 			} else {
@@ -129,7 +128,11 @@ public class HTTPRequestHandler {
 		System.out.println("File " + path + " can be found on " + host + ":"
 				+ port + " with bitrate " + rate + ".");
 
-		// TODO: actually generate a routing table
+		RoutingTable.getInstance().addtofileNames(
+				path,
+				new PeerData(host, Integer.parseInt(port), Integer
+						.parseInt(rate)));
+		// Adds parameters to the Routing table.
 	}
 
 	private void handlePeerConfig(String parameters) {
@@ -150,6 +153,12 @@ public class HTTPRequestHandler {
 		 * listener to receive an incoming packet and mirror it blindly to the
 		 * client.
 		 */
+		
+		// We should never 404 here.
+		
+		//byte[] response = UDPManager.getFile(target);
+		//mirrorPacketToClient(response, response.length);
+		
 	}
 
 	private void handleLocalRequest(File target) {

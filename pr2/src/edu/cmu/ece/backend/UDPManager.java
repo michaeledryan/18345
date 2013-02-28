@@ -7,12 +7,22 @@ import java.net.SocketTimeoutException;
 
 public class UDPManager implements Runnable {
 	private static int packetLength = 1 << 10;
-	private int portNum;
+	private static int portNum;
 	private DatagramSocket socket;
+	private static UDPManager instance = null;
 
-	public UDPManager(int port) {
+	public static void setPort(int port) {
 		portNum = port;
 	}
+	
+	public static UDPManager getInstance() {
+		if (instance == null) {
+			instance = new UDPManager();
+		}
+		return instance;
+	}
+	
+	private UDPManager() {}
 
 	@Override
 	public void run() {
@@ -35,7 +45,7 @@ public class UDPManager implements Runnable {
 				socket.receive(packet);
 				
 				// Handle packet then loop back
-				UDPPacketHandler handle = new UDPPacketHandler(packet, this);
+				UDPPacketHandler handle = new UDPPacketHandler(packet);
 				new Thread(handle).start();
 			} catch (SocketTimeoutException e) {
 				// Do nothing, this is fine

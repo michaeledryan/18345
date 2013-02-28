@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+import edu.cmu.ece.backend.RoutingTable;
 import edu.cmu.ece.backend.UDPManager;
 
 /**
@@ -15,7 +16,8 @@ import edu.cmu.ece.backend.UDPManager;
 public class HTTPServer implements Runnable {
 
 	private int portNum;
-	private UDPManager udp;
+	private int clientID = 0;
+	private static UDPManager udp = UDPManager.getInstance();
 	private ServerSocket socket;
 
 	/**
@@ -23,12 +25,9 @@ public class HTTPServer implements Runnable {
 	 * 
 	 * @param port
 	 *            the port on which we listen
-	 * @param udp_man
-	 *            the UDP manager that listens/sends packet
 	 */
-	public HTTPServer(int port, UDPManager udp_man) {
+	public HTTPServer(int port) {
 		portNum = port;
-		udp = udp_man;
 	}
 
 	/**
@@ -52,8 +51,8 @@ public class HTTPServer implements Runnable {
 			HTTPClientHandler handle;
 			try {
 				client = socket.accept();
-				handle = new HTTPClientHandler(client, udp);
-				// TODO: Add client to directory
+				handle = new HTTPClientHandler(client);
+				RoutingTable.getInstance().addtoIds(clientID++, handle);
 				new Thread(handle).start();
 			} catch (IOException e) {
 				System.out.println("Error connecting to client on HTTP.");

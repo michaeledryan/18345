@@ -5,12 +5,11 @@ import java.net.DatagramPacket;
 import edu.cmu.ece.packet.UDPPacket;
 
 public class UDPPacketHandler implements Runnable {
-	@SuppressWarnings("unused")
-	private UDPManager udp;
+
+	private static UDPManager udp = UDPManager.getInstance();
 	private UDPPacket packet;
 
-	public UDPPacketHandler(DatagramPacket incoming, UDPManager udp_man) {
-		udp = udp_man;
+	public UDPPacketHandler(DatagramPacket incoming) {
 		packet = new UDPPacket(incoming);
 	}
 

@@ -23,7 +23,7 @@ public class HTTPClientHandler implements Runnable {
 	private int id;
 	private boolean listening = true;
 
-	private UDPManager udp;
+	private static UDPManager udp = UDPManager.getInstance();
 	private Socket client;
 	private BufferedReader in;
 	private OutputStream out;
@@ -42,10 +42,9 @@ public class HTTPClientHandler implements Runnable {
 	 * @throws IOException
 	 *             If input and output streams could not be initialized.
 	 */
-	public HTTPClientHandler(Socket incoming, UDPManager udp_man)
+	public HTTPClientHandler(Socket incoming)
 			throws IOException {
 		id = ++clientCount;
-		udp = udp_man;
 		client = incoming;
 		in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 		out = client.getOutputStream();
@@ -64,7 +63,7 @@ public class HTTPClientHandler implements Runnable {
 
 				// Parse request, send response
 				request = new HTTPRequestPacket(in);
-				HTTPRequestHandler responder = new HTTPRequestHandler(id, udp, request,
+				HTTPRequestHandler responder = new HTTPRequestHandler(id, request,
 						out, textOut);
 				responder.determineRequest();
 

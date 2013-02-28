@@ -17,8 +17,8 @@ public class VodServer {
 	 *            port number
 	 */
 	public static void main(String[] args) {
-		int httpPort = 18345;
-		int udpPort = 18346;
+		int httpPort = 8345;
+		int udpPort = 8346;
 
 		// Parse args
 		if (args.length > 1) {
@@ -36,18 +36,16 @@ public class VodServer {
 		}
 
 		/*
-		 * GLOBAL TODO: Create a map from client IDs to HTTPClientHandlers...
-		 * Must be system wide as the UDP manager needs access to it
-		 * 
 		 * GLOBAL TODO: Global packet size - we must make sure the HTTP packets
 		 * have a max size that is less than the max packet size of our UDP
 		 * packet plus its own headers. Not sure how to do this ~mnye
 		 */
 
 		// Run servers on their own threads
-		UDPManager udp = new UDPManager(udpPort);
-		HTTPServer http = new HTTPServer(httpPort, udp);
-		new Thread(udp).start();
+		
+		UDPManager.setPort(udpPort);
+		HTTPServer http = new HTTPServer(httpPort);
+		new Thread(UDPManager.getInstance()).start();
 		new Thread(http).start();
 	}
 
