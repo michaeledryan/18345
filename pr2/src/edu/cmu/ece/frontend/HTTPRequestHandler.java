@@ -17,7 +17,7 @@ import edu.cmu.ece.packet.ResponseFileData;
  * @author Michaels
  * 
  */
-public class RequestHandler {
+public class HTTPRequestHandler {
 	@SuppressWarnings("unused")
 	private UDPManager udp;
 	private HTTPRequestPacket request;
@@ -35,7 +35,7 @@ public class RequestHandler {
 	 * @param output
 	 * @param textoutput
 	 */
-	public RequestHandler(int id, UDPManager udp_man,
+	public HTTPRequestHandler(int id, UDPManager udp_man,
 			HTTPRequestPacket request,
 			OutputStream output, PrintWriter textoutput) {
 		this.clientId = id;

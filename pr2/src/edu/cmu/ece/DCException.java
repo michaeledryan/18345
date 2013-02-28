@@ -1,4 +1,4 @@
-package edu.cmu.ece.frontend;
+package edu.cmu.ece;
 
 /**
  * Exception that is thrown when we must disconnect.

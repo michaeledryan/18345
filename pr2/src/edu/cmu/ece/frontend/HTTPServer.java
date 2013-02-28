@@ -23,6 +23,8 @@ public class HTTPServer implements Runnable {
 	 * 
 	 * @param port
 	 *            the port on which we listen
+	 * @param udp_man
+	 *            the UDP manager that listens/sends packet
 	 */
 	public HTTPServer(int port, UDPManager udp_man) {
 		portNum = port;
@@ -47,10 +49,11 @@ public class HTTPServer implements Runnable {
 		// Listen for clients
 		while (true) {
 			Socket client;
-			ClientHandler handle;
+			HTTPClientHandler handle;
 			try {
 				client = socket.accept();
-				handle = new ClientHandler(client, udp);
+				handle = new HTTPClientHandler(client, udp);
+				// TODO: Add client to directory
 				new Thread(handle).start();
 			} catch (IOException e) {
 				System.out.println("Error connecting to client on HTTP.");

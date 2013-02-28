@@ -6,13 +6,12 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import edu.cmu.ece.frontend.DCException;
+import edu.cmu.ece.DCException;
 
 /**
  * Parses an HTTP request. Creates a map of header fields to values.
  * 
  * @author Michaels
- * 
  */
 public class HTTPRequestPacket {
 	private String request;

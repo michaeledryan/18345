@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 
+import edu.cmu.ece.DCException;
 import edu.cmu.ece.backend.UDPManager;
 import edu.cmu.ece.packet.HTTPRequestPacket;
 
@@ -16,7 +17,7 @@ import edu.cmu.ece.packet.HTTPRequestPacket;
  * @author Michaels
  * 
  */
-public class ClientHandler implements Runnable {
+public class HTTPClientHandler implements Runnable {
 
 	private static int clientCount = 0;
 	private int id;
@@ -34,10 +35,14 @@ public class ClientHandler implements Runnable {
 	 * @param incoming
 	 *            the Socket connected to the client.yup
 	 * 
+	 * @param udp_man
+	 *            the global udp manager, so we know where to send our upd
+	 *            packets to
+	 * 
 	 * @throws IOException
 	 *             If input and output streams could not be initialized.
 	 */
-	public ClientHandler(Socket incoming, UDPManager udp_man)
+	public HTTPClientHandler(Socket incoming, UDPManager udp_man)
 			throws IOException {
 		id = ++clientCount;
 		udp = udp_man;
@@ -59,7 +64,7 @@ public class ClientHandler implements Runnable {
 
 				// Parse request, send response
 				request = new HTTPRequestPacket(in);
-				RequestHandler responder = new RequestHandler(id, udp, request,
+				HTTPRequestHandler responder = new HTTPRequestHandler(id, udp, request,
 						out, textOut);
 				responder.determineRequest();
 
@@ -90,4 +95,7 @@ public class ClientHandler implements Runnable {
 		}
 	}
 
+	public int getClientID() {
+		return this.id;
+	}
 }

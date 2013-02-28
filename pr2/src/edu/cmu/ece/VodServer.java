@@ -35,6 +35,15 @@ public class VodServer {
 			}
 		}
 
+		/*
+		 * GLOBAL TODO: Create a map from client IDs to HTTPClientHandlers...
+		 * Must be system wide as the UDP manager needs access to it
+		 * 
+		 * GLOBAL TODO: Global packet size - we must make sure the HTTP packets
+		 * have a max size that is less than the max packet size of our UDP
+		 * packet plus its own headers. Not sure how to do this ~mnye
+		 */
+
 		// Run servers on their own threads
 		UDPManager udp = new UDPManager(udpPort);
 		HTTPServer http = new HTTPServer(httpPort, udp);
