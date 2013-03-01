@@ -1,0 +1,83 @@
+18-345 pr2
+
+Header Format
+
+Our UDP Header will consist of three four-byte integers.
+First:  ClientID number from the originating backend server.
+Second: Sequence number, for tracking in our ARQ. This is linked to connection.
+Third: UDP Packet type, one of :
+    
+    REQUEST: reqeusting a file from another server
+    DATA: File sent to a reqeuster
+    CONFIG: Sends information about backend configuration
+    ACK: Acknowledgement or received packet (not yet implemented)
+
+
+Control flow for UDP information:
+
+One thread listening:
+
+
+  STATE       |   INPUT               | NEXT STATE
+  --------------------------------------------------
+  LISTENING   |                       |
+    wait for  |                       |
+    incoming  |                       |
+    packet    |                       |
+              |                       |
+
+
+
+
+Many threads sending:
+
+
+  SEND ---- receives ACK ---- quit
+ /\  |
+  |  |
+  |  |
+  |  |
+  |  \/
+  --NAK / TIMEOUT
+
+
+
+NOTES:
+
+LISTEN
+
+block
+
+gets packet
+
+parse header - clientID, sequenceNum, and IP.
+
+Inserted into multipacket buffer, unique to each IP/clientID pair.
+PQueue - dequeue and pass.
+Waits.
+
+Passes message to sender, which send, waits for ACK and either sends next packet or ends.
+    No ACK or a NAK: resend if not done.
+    Timeout: connection drops.
+
+Multi-packet BufferReader
+  waits.
+  sorts incoming packets in seqNum order.
+  sends NAK acording to selective-repeat scheme.
+  Handles consecutively until it finds a gap, sending ACK each time.
+
+
+
+listening gets a packet.
+
+sends ACK.
+
+keeps buffer, sorts by sequenceID.
+
+If it has the next seqence number, it spawns a Handler thread and returns to listening.
+
+Handler:
+
+parses request, sends response.
+
+
