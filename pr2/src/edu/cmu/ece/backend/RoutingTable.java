@@ -44,6 +44,7 @@ public class RoutingTable {
 	 */
 	public PeerData addtofileNames(String path, PeerData ip) {
 		synchronized (fileNamesToPeerData) {
+			System.out.println(path);
 			return fileNamesToPeerData.put(path, ip);
 		}
 	}

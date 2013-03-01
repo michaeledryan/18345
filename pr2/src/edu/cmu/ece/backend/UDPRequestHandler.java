@@ -10,7 +10,7 @@ import java.net.UnknownHostException;
 
 import edu.cmu.ece.DCException;
 import edu.cmu.ece.packet.HTTPRequestPacket;
-import edu.cmu.ece.packet.HTTPResponse404;
+import edu.cmu.ece.packet.HTTPResponses;
 import edu.cmu.ece.packet.HTTPResponseHeader;
 import edu.cmu.ece.packet.UDPPacket;
 import edu.cmu.ece.packet.UDPPacketType;
@@ -76,6 +76,7 @@ public class UDPRequestHandler {
 		UDPPacket headerPacket = new UDPPacket(backendRequest.getClientID(),
 				backendRequest.getRemoteIP(), backendRequest.getRemotePort(),
 				header.toString().getBytes(), UDPPacketType.DATA);
+		System.out.println("Sending over UDP Connection");
 		udp.sendPacket(headerPacket.getPacket());
 
 		// TODO: figure out how to use ResponseFileData to send file buffers
@@ -85,7 +86,7 @@ public class UDPRequestHandler {
 		// Also ugly... easier way?
 		StringWriter response = new StringWriter();
 		PrintWriter responseBuffer = new PrintWriter(response);
-		HTTPResponse404.send404(frontendRequest, responseBuffer);
+		HTTPResponses.send404(frontendRequest, responseBuffer);
 
 		// Create UDP response packet from result, send out
 		UDPPacket out = new UDPPacket(backendRequest.getClientID(),

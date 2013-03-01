@@ -9,7 +9,7 @@ import edu.cmu.ece.backend.PeerData;
 import edu.cmu.ece.backend.RoutingTable;
 import edu.cmu.ece.backend.UDPManager;
 import edu.cmu.ece.packet.HTTPRequestPacket;
-import edu.cmu.ece.packet.HTTPResponse404;
+import edu.cmu.ece.packet.HTTPResponses;
 import edu.cmu.ece.packet.HTTPResponseHeader;
 import edu.cmu.ece.packet.ResponseFileData;
 import edu.cmu.ece.packet.UDPPacket;
@@ -59,14 +59,14 @@ public class HTTPRequestHandler {
 		if (requested.startsWith("peer/")) {
 			// First check if we need to add to the routing table
 			if (requested.startsWith("add?", 5)) {
-				this.addToRoutingTable(requested.substring(9));
+				addToRoutingTable(requested.substring(9));
 				return;
 			}
 
 			// Next check if we need to configure routing settings
 			if (requested.startsWith("config?", 5)) {
 				// Handle mystery peer config
-				this.handlePeerConfig(requested.substring(12));
+				handlePeerConfig(requested.substring(12));
 				return;
 			}
 
@@ -75,10 +75,10 @@ public class HTTPRequestHandler {
 			String file = requested.substring(10);
 			System.out.println("Remote file request for: " + file);
 			if (RoutingTable.getInstance().checkPath(file)) {
-				this.handleRemoteRequest(file);
+				handleRemoteRequest(file);
 				return;
 			} else {
-				HTTPResponse404.send404(request, textOut);
+				HTTPResponses.send404(request, textOut);
 				return;
 			}
 		}
@@ -91,7 +91,7 @@ public class HTTPRequestHandler {
 			this.handleLocalRequest(target);
 			return;
 		} else {
-			HTTPResponse404.send404(request, textOut);
+			HTTPResponses.send404(request, textOut);
 			return;
 		}
 	}
@@ -109,36 +109,50 @@ public class HTTPRequestHandler {
 				path = keyValue[1];
 			else if (keyValue[0].equals("host"))
 				host = keyValue[1];
-
 			else if (keyValue[0].equals("port"))
 				port = keyValue[1];
 			else if (keyValue[0].equals("rate"))
 				rate = keyValue[1];
 		}
+		System.out.println("Parameters:" + parameters);
 		System.out.println("Config request with parameters:");
 		System.out.println("File " + path + " can be found on " + host + ":"
 				+ port + " with bitrate " + rate + ".");
 
-		router.addtofileNames(path,
-				new PeerData(host, Integer.parseInt(port), Integer
-						.parseInt(rate)));
+		
+		PeerData peerdata = new PeerData(host, Integer.parseInt(port), Integer
+				.parseInt(rate));
+		router.addtofileNames(path, peerdata);
+		
+		HTTPResponses.sendPeerConfigMessage(path, request, textOut);
+		
+		
 		// Adds parameters to the Routing table.
 	}
 
 	private void handlePeerConfig(String parameters) {
 		System.out.println("Config request with parameters:");
 		System.out.println(parameters);
-
+		
+		int rate = Integer.parseInt(parameters.split("=")[1]);
+		
+		router.setBitRate(rate);
 		// TODO: figure out how to implement bitrate stuff
+		
+		HTTPResponses.sendBitRateConfigMessage(rate, request, textOut);
 	}
 
 	private void handleRemoteRequest(String target) {
 		/*
 		 * Look up file in the routing table. If it isn't found, send a 404
 		 */
+		System.out.println("Remote request!");
+		System.out.println(target);
 		PeerData remote = router.getPeerData(target);
-		if (remote == null)
-			HTTPResponse404.send404(request, textOut);
+		if (remote == null) {
+			HTTPResponses.send404(request, textOut);
+			return;
+		}
 		
 		// Send UDP request packet with full HTTP Header copied in
 		try {

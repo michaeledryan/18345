@@ -54,14 +54,14 @@ public class UDPPacket {
 		 * packet, the sequence of that packet. Then is the actual data to send
 		 */
 		body = new byte[data.length + HEADER_SIZE * Integer.SIZE / 8];
-		Array.setInt(body, 0, client);
-		Array.setInt(body, 1, 1);
-		Array.setInt(body, 2, type.getValue());
+		Array.setByte(body, 0, (byte) client);
+		Array.setByte(body, 1, (byte) 1);
+		Array.setByte(body, 2, (byte) type.getValue());
 
 		System.arraycopy(data, 0, body, HEADER_SIZE * Integer.SIZE / 8,
 				data.length);
 		dataLength = data.length;
-
+		
 		// Plug the data into a DatagramPacket
 		datagram = new DatagramPacket(body, body.length, remoteIP, remotePort);
 	}
