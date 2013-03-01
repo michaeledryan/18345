@@ -24,9 +24,13 @@ public class UDPPacketHandler implements Runnable {
 		 * If it is a request packet, create a new UDPRequestHandler to send the
 		 * data back with the file path in question back to the source client
 		 */
+		
+		System.out.println("Packet Handler started.");
 
 		switch (packet.getType()) {
 		case REQUEST:
+			UDPRequestHandler handler = new UDPRequestHandler(packet);
+			handler.determineRequest();
 			// Trigger a UDPRequestHandler to find the file and send it out
 			return;
 
@@ -36,6 +40,9 @@ public class UDPPacketHandler implements Runnable {
 			HTTPClientHandler client = router
 					.getClientHandler(packet.getClientID());
 			byte[] packetData = packet.getData();
+			if (client == null){
+				System.out.println("client ID not found.");
+			}
 			client.mirrorPacketToClient(packetData, packetData.length);
 			return;
 
@@ -43,6 +50,7 @@ public class UDPPacketHandler implements Runnable {
 			// TODO: I have no idea. For now, fall through to default
 
 		default:
+			
 			// Do nothing - ignore invalid requests
 			return;
 		}

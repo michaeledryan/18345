@@ -8,6 +8,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 
 import edu.cmu.ece.DCException;
+import edu.cmu.ece.backend.RoutingTable;
 import edu.cmu.ece.packet.HTTPRequestPacket;
 
 /**
@@ -47,6 +48,7 @@ public class HTTPClientHandler implements Runnable {
 		in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 		out = client.getOutputStream();
 		textOut = new PrintWriter(out, true);
+		RoutingTable.getInstance().addtoIds(id, this);
 	}
 
 	/**
@@ -58,7 +60,7 @@ public class HTTPClientHandler implements Runnable {
 
 		while (listening) {
 			try {
-
+				
 				// Parse request, send response
 				request = new HTTPRequestPacket(in);
 				HTTPRequestHandler responder = new HTTPRequestHandler(id, request,
@@ -105,6 +107,7 @@ public class HTTPClientHandler implements Runnable {
 		} catch (IOException e) {
 			System.out.println("Could not read/write file: " + e.getMessage());
 		}
+		System.out.println("Done mirroring");
 	}
 
 }

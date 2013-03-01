@@ -6,7 +6,7 @@ import java.net.DatagramSocket;
 import java.net.SocketTimeoutException;
 
 public class UDPManager implements Runnable {
-	private static int packetLength = 1 << 10;
+	private static int packetLength = 1 << 17;
 	private static int portNum;
 	private DatagramSocket socket;
 	private static UDPManager instance = null;
@@ -40,10 +40,11 @@ public class UDPManager implements Runnable {
 			// Try to receive a packet
 			DatagramPacket packet;
 			try {
+				System.out.println("Finding packet...");
 				packet = new DatagramPacket(new byte[packetLength],
 						packetLength);
 				socket.receive(packet);
-				
+				System.out.println("Packet found:");
 				// Handle packet then loop back
 				UDPPacketHandler handle = new UDPPacketHandler(packet);
 				new Thread(handle).start();
@@ -59,7 +60,7 @@ public class UDPManager implements Runnable {
 		try {
 			socket.send(packet);
 		} catch (IOException e) {
-			System.out.println("Could not send packet on UDP.");
+			System.out.println("Could not send packet on UDP." + e.getMessage());
 		}
 	}
 }

@@ -67,6 +67,7 @@ public class HTTPRequestHandler {
 			if (requested.startsWith("config?", 5)) {
 				// Handle mystery peer config
 				handlePeerConfig(requested.substring(12));
+				System.out.println("handled.");
 				return;
 			}
 
@@ -162,6 +163,7 @@ public class HTTPRequestHandler {
 					remote.getPort(), requestString.getBytes(),
 					UDPPacketType.REQUEST);
 			udp.sendPacket(backendRequest.getPacket());
+			System.out.println("Sent Packet.");
 		} catch (UnknownHostException e) {
 			System.out.println("Invalid host provided in routing table.");
 		}

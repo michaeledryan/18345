@@ -15,7 +15,6 @@ import edu.cmu.ece.backend.RoutingTable;
 public class HTTPServer implements Runnable {
 
 	private int portNum;
-	private int clientID = 0;
 	private ServerSocket socket;
 
 	/**
@@ -50,7 +49,6 @@ public class HTTPServer implements Runnable {
 			try {
 				client = socket.accept();
 				handle = new HTTPClientHandler(client);
-				RoutingTable.getInstance().addtoIds(clientID++, handle);
 				new Thread(handle).start();
 			} catch (IOException e) {
 				System.out.println("Error connecting to client on HTTP.");

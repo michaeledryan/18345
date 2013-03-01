@@ -5,7 +5,6 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-
 public class UDPPacket {
 	// Core packet elements
 	private DatagramPacket datagram;
@@ -35,7 +34,7 @@ public class UDPPacket {
 		// Parse out custom packet header from data
 		clientID = Array.getInt(body, 0);
 		sequenceNumber = Array.getInt(body, 1);
-		type = UDPPacketType.fromInt(Array.getInt(body, 3));
+		type = UDPPacketType.fromInt(Array.getInt(body, 2));
 	}
 
 	// Constructor to create new packet to send
@@ -61,7 +60,7 @@ public class UDPPacket {
 		System.arraycopy(data, 0, body, HEADER_SIZE * Integer.SIZE / 8,
 				data.length);
 		dataLength = data.length;
-		
+
 		// Plug the data into a DatagramPacket
 		datagram = new DatagramPacket(body, body.length, remoteIP, remotePort);
 	}

@@ -29,6 +29,7 @@ public class HTTPRequestPacket {
 		// First parse the header line to get the request
 		String line = packet.readLine();
 
+		System.out.println("Line: " + line);
 		// Get the request from the middle field
 		if (line == null)
 			throw new DCException();
@@ -45,8 +46,10 @@ public class HTTPRequestPacket {
 			tokens = line.split(":");
 			if (tokens.length >= 2)
 				headers.put(tokens[0], tokens[1].trim());
-			headerString += line;
+			headerString += line + "\n";
 		}
+
+		headerString += "\n";
 	}
 
 	public String getRequest() {
