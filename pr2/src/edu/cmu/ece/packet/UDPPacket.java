@@ -53,6 +53,8 @@ public class UDPPacket {
 		 * packet, the sequence of that packet. Then is the actual data to send
 		 */
 		body = new byte[data.length + HEADER_SIZE * Integer.SIZE / 8];
+		/* TODO: Make this set integers... seems to be giving us bogus headers.
+		*/
 		Array.setByte(body, 0, (byte) client);
 		Array.setByte(body, 1, (byte) 1);
 		Array.setByte(body, 2, (byte) type.getValue());

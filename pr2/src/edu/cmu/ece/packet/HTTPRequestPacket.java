@@ -31,6 +31,11 @@ public class HTTPRequestPacket {
 
 		System.out.println("Line: " + line);
 		// Get the request from the middle field
+		/*if ((line != null) && (line.equals("HTTP/1.1 200 OK"))) {
+			for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
+ 			   System.out.println(ste);
+ 			 }
+		}*/
 		if (line == null)
 			throw new DCException();
 		String[] tokens = line.split(" ");
@@ -46,10 +51,9 @@ public class HTTPRequestPacket {
 			tokens = line.split(":");
 			if (tokens.length >= 2)
 				headers.put(tokens[0], tokens[1].trim());
-			headerString += line + "\n";
+			headerString += line + "\r\n";
 		}
-
-		headerString += "\n";
+		headerString += "\r\n";
 	}
 
 	public String getRequest() {
