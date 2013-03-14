@@ -1,22 +1,15 @@
 package edu.cmu.ece.backend;
 
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.CharArrayReader;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.UnknownHostException;
-
-import sun.misc.IOUtils;
+import java.util.Arrays;
 
 import edu.cmu.ece.DCException;
 import edu.cmu.ece.packet.HTTPRequestPacket;
@@ -30,6 +23,9 @@ public class UDPRequestHandler {
 	private UDPManager udp = UDPManager.getInstance();
 	private UDPPacket backendRequest;
 	private HTTPRequestPacket frontendRequest;
+	private static int dataLength = 65507 - 12; // 2^16 - 20 (IP
+											// header) - 8 (UDP
+											// header) - 12 (header)
 
 	/**
 	 * Constructor. Sets necessary fields.
@@ -86,10 +82,11 @@ public class UDPRequestHandler {
 		System.out.println("Handling request...");
 		String header = HTTPResponseHeader.makeHeader(target, frontendRequest);
 
+		// get header bytes, then data bytes. We need to split data into several
+		// packets of dataLength size each.
+
 		byte[] headerBytes = header.toString().getBytes();
-
 		HTTPRequestPacket requestPacket = null;
-
 		try {
 			requestPacket = new HTTPRequestPacket(new BufferedReader(
 					new StringReader(header)));
@@ -102,6 +99,7 @@ public class UDPRequestHandler {
 
 		// Concatenate headers and data, avoiding concurrency issues without any
 		// kind of ARQ
+
 		byte[] outArray = out.toByteArray();
 		byte[] finalArray = new byte[headerBytes.length + outArray.length];
 
@@ -109,13 +107,47 @@ public class UDPRequestHandler {
 		System.arraycopy(outArray, 0, finalArray, headerBytes.length,
 				outArray.length);
 
-		UDPPacket finalPacket = new UDPPacket(backendRequest.getClientID(),
-				backendRequest.getRemoteIP(), backendRequest.getRemotePort(),
-				finalArray, UDPPacketType.DATA);
+		// Now that we have a final array of both the headers and the entirety
+		// of the file (is that bad for memory?), we can stagger packet sending.
 
-		udp.sendPacket(finalPacket.getPacket());
-		System.out.println("Sent data.");
+		int bytesSent = 0;
+		int seqNum = 1;
 
+		// Send multiple UDPPackets, each of an appropriate length.
+		/*
+		 * TODO: ACKs/NAKs. Currently testing with 100% packet reliability (this
+		 * is bad!)
+		 */
+		while (bytesSent < finalArray.length) {
+
+			// Get current packet length and copy what we need into a new array.
+			// This is not terribly memory efficient. I think we may need to
+			// write temp files? That could have weird repercussions on both
+			// sides, as well as managing total length vs header and data
+			// lengths
+			int packetLength = (finalArray.length - bytesSent > dataLength) ? dataLength
+					: finalArray.length - bytesSent;
+
+			byte[] currentByteArray = Arrays.copyOfRange(finalArray, bytesSent,
+					bytesSent + packetLength);
+
+			UDPPacketType type = (bytesSent + packetLength == finalArray.length) ? UDPPacketType.END
+					: UDPPacketType.DATA;
+
+			UDPPacket finalPacket = new UDPPacket(backendRequest.getClientID(),
+					backendRequest.getRemoteIP(),
+					backendRequest.getRemotePort(), currentByteArray, type,
+					seqNum);
+
+			udp.sendPacket(finalPacket.getPacket());
+			System.out.println("Sent with seqNum: " + seqNum);
+
+			bytesSent += packetLength;
+			seqNum++;
+
+		}
+
+		System.out.println("bytesSent: " + bytesSent + "; " + finalArray.length);
 	}
 
 	private void handle404() throws UnknownHostException {
@@ -127,7 +159,7 @@ public class UDPRequestHandler {
 		// Create UDP response packet from result, send out
 		UDPPacket out = new UDPPacket(backendRequest.getClientID(),
 				backendRequest.getRemoteIP(), backendRequest.getRemotePort(),
-				response.toString().getBytes(), UDPPacketType.DATA);
+				response.toString().getBytes(), UDPPacketType.END, 1);
 		udp.sendPacket(out.getPacket());
 	}
 }

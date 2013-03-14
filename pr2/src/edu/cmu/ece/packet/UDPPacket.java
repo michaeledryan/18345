@@ -14,7 +14,7 @@ public class UDPPacket {
 	// Custom packet header
 	public final int HEADER_SIZE = 3;
 	private int clientID;
-	@SuppressWarnings("unused")
+	
 	private int sequenceNumber;
 	private UDPPacketType type;
 
@@ -27,7 +27,8 @@ public class UDPPacket {
 		// Get raw packet information from UDP
 		datagram = packet;
 		body = packet.getData();
-		dataLength = body.length - HEADER_SIZE * Integer.SIZE / 8;
+		dataLength = packet.getLength() - HEADER_SIZE * Integer.SIZE / 8;
+		// lengths on DatagramPackets are weird.
 		remoteIP = packet.getAddress();
 		remotePort = packet.getPort();
 
@@ -39,24 +40,29 @@ public class UDPPacket {
 
 	// Constructor to create new packet to send
 	public UDPPacket(int client, String destinationIP, int destinationPort,
-			byte[] data, UDPPacketType type) throws UnknownHostException {
+			byte[] data, UDPPacketType type, int seqNum) throws UnknownHostException {
 		// Create the UDP header
 		remoteIP = InetAddress.getByName(destinationIP);
 		remotePort = destinationPort;
 
 		// Set other data
 		clientID = client;
-		sequenceNumber = 1;
+		sequenceNumber = seqNum;
 
 		/*
 		 * Create full packet body Header consists of the clientID sending the
 		 * packet, the sequence of that packet. Then is the actual data to send
 		 */
+
 		body = new byte[data.length + HEADER_SIZE * Integer.SIZE / 8];
+		
 		/* TODO: Make this set integers... seems to be giving us bogus headers.
 		*/
+		
+		// This still works for 1-byte numbers....
+		
 		Array.setByte(body, 0, (byte) client);
-		Array.setByte(body, 1, (byte) 1);
+		Array.setByte(body, 1, (byte) sequenceNumber);
 		Array.setByte(body, 2, (byte) type.getValue());
 
 		System.arraycopy(data, 0, body, HEADER_SIZE * Integer.SIZE / 8,
@@ -69,6 +75,10 @@ public class UDPPacket {
 
 	public String getRemoteIP() {
 		return remoteIP.getHostAddress();
+	}
+	
+	public int getSequenceNumber() {
+		return sequenceNumber;
 	}
 
 	public int getRemotePort() {

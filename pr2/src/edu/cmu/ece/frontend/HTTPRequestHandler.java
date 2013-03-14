@@ -161,7 +161,7 @@ public class HTTPRequestHandler {
 					+ request.getFullHeader();
 			UDPPacket backendRequest = new UDPPacket(clientID, remote.getIP(),
 					remote.getPort(), requestString.getBytes(),
-					UDPPacketType.REQUEST);
+					UDPPacketType.REQUEST, 1);
 			udp.sendPacket(backendRequest.getPacket());
 			System.out.println("Sent Packet.");
 		} catch (UnknownHostException e) {

@@ -6,10 +6,14 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import edu.cmu.ece.DCException;
 import edu.cmu.ece.backend.RoutingTable;
 import edu.cmu.ece.packet.HTTPRequestPacket;
+import edu.cmu.ece.packet.UDPPacket;
+import edu.cmu.ece.packet.UDPPacketType;
 
 /**
  * Manages a connection to a given client.
@@ -22,6 +26,10 @@ public class HTTPClientHandler implements Runnable {
 	private static int clientCount = 0;
 	private int id;
 	private boolean listening = true;
+	private Queue<UDPPacket> packetQueue = new ConcurrentLinkedQueue<UDPPacket>();
+	private int queueLimit;
+	private int seqNum = 1;
+	private boolean reachedEnd = false;
 
 	private Socket client;
 	private BufferedReader in;
@@ -41,8 +49,7 @@ public class HTTPClientHandler implements Runnable {
 	 * @throws IOException
 	 *             If input and output streams could not be initialized.
 	 */
-	public HTTPClientHandler(Socket incoming)
-			throws IOException {
+	public HTTPClientHandler(Socket incoming) throws IOException {
 		id = ++clientCount;
 		client = incoming;
 		in = new BufferedReader(new InputStreamReader(client.getInputStream()));
@@ -60,11 +67,11 @@ public class HTTPClientHandler implements Runnable {
 
 		while (listening) {
 			try {
-				
+
 				// Parse request, send response
 				request = new HTTPRequestPacket(in);
-				HTTPRequestHandler responder = new HTTPRequestHandler(id, request,
-						out, textOut);
+				HTTPRequestHandler responder = new HTTPRequestHandler(id,
+						request, out, textOut);
 				responder.determineRequest();
 
 				// Check if we must close the connection.
@@ -94,20 +101,67 @@ public class HTTPClientHandler implements Runnable {
 		}
 	}
 
+	/**
+	 * @return The ID of the client.
+	 */
 	public int getClientID() {
 		return this.id;
 	}
 
-	/* Used by UDP responses to mirror data to the original client over TCP */
-	public void mirrorPacketToClient(byte[] buffer, int length) {
-		System.out.println("Mirroring buffer to client.");
+	/**
+	 * Adds a given UDPPacket to the client.
+	 * 
+	 * @param packet
+	 *            the packet to be added/
+	 */
+	public void addToQueue(UDPPacket packet) {
+		// System.out.println("Added packet to queue");
+		if (packet.getSequenceNumber() != seqNum) {
+			System.out.println("Out of order!");
+			// TODO: Send a NAK?
+		}
+		seqNum++;
+		packetQueue.add(packet);
+		if (packet.getType() == UDPPacketType.END) {
+			System.out.println("GOT END");
+			reachedEnd = true;
+			queueLimit = packet.getSequenceNumber();
+			// System.out
+			// .println("sequence number: " + packet.getSequenceNumber());
+			// System.out.println("Queue size: " + packetQueue.size());
+		}
+		if (reachedEnd && (queueLimit == packetQueue.size())) {
+			// System.out.println("GOT EVERYTHING");
+			sendQueueToClient();
+		}
+	}
+
+	/**
+	 * Called when the queue has every necessary packet. Sends data to the
+	 * client.
+	 */
+	private void sendQueueToClient() {
+		System.out.print("Mirroring packet(s)...");
+		for (UDPPacket packet : packetQueue) {
+			byte[] packetData = packet.getData();
+			try {
+				out.write(packetData, 0, packetData.length);
+				// System.out.println(client.isClosed());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 		try {
-			out.write(buffer, 0, length);
 			out.flush();
 		} catch (IOException e) {
-			System.out.println("Could not read/write file: " + e.getMessage());
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
-		System.out.println("Done mirroring");
+
+		packetQueue = new ConcurrentLinkedQueue<UDPPacket>();
+		reachedEnd = false;
+		queueLimit = 0;
+
 	}
 
 }
