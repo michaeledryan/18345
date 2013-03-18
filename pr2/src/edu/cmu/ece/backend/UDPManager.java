@@ -4,11 +4,14 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketTimeoutException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class UDPManager implements Runnable {
 	private static int packetLength = 1 << 17;
 	private static int portNum;
 	private DatagramSocket socket;
+	private Map<PeerData,UDPRequestHandler> myMap = new HashMap<PeerData, UDPRequestHandler>(); 
 	private static UDPManager instance = null;
 
 	public static void setPort(int port) {

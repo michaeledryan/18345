@@ -1,6 +1,7 @@
 package edu.cmu.ece.backend;
 
 import java.net.DatagramPacket;
+import java.net.UnknownHostException;
 
 import edu.cmu.ece.frontend.HTTPClientHandler;
 import edu.cmu.ece.packet.UDPPacket;
@@ -29,26 +30,58 @@ public class UDPPacketHandler implements Runnable {
 
 		System.out.println("Packet Handler started.");
 
+		PeerData pd = new PeerData(packet.getRemoteIP(),
+				packet.getRemotePort(), 0);
 		switch (packet.getType()) {
 		case REQUEST:
 			UDPRequestHandler handler = new UDPRequestHandler(packet);
 			handler.determineRequest();
-			// Trigger a UDPRequestHandler to find the file and send it out
+			router.addToRequests(pd, handler);
+			// Trigger a UDPRequestHandler to find the file and send it out.
+			// MAke the handler visible so that we can get it later for ACKs
 			return;
+
+		case ACK:
+			if (router.getRequest(pd) != null) {
+				System.out.println("Got ACK");
+				router.getRequest(pd).sendNext(packet.getSequenceNumber());
+			}
+			return;
+			// We got the packet, so let's send another. We still have to
+			// implement timeouts.
+		case NAK:
+			pd = new PeerData(packet.getRemoteIP(), packet.getRemotePort(), 0);
+			if (router.getRequest(pd) != null) {
+				router.getRequest(pd).resend();
+			}
+			return;
+			// Send again? This is just stop-and-wait here... Not sure how to do
+			// timeouts.
 
 		case END:
 		case DATA:
 			// Get the client that requested the packet and give him the data
 			// to respond over TCP
-			
+
 			HTTPClientHandler client = router.getClientHandler(packet
 					.getClientID());
 			if (client == null) {
 				System.out.println("client ID not found.");
 			}
-			
+
 			// Add to the HTTPClientHandler's queue.
 			client.addToQueue(packet);
+			try {
+				System.err.println("Sending ACK");
+				UDPManager.getInstance().sendPacket(
+						new UDPPacket(client.getClientID(), packet
+								.getRemoteIP(), packet.getRemotePort(),
+								new byte[0], UDPPacketType.ACK, packet
+										.getSequenceNumber() + 1).getPacket());
+			} catch (UnknownHostException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			return;
 
 		case CONFIG:
@@ -59,5 +92,4 @@ public class UDPPacketHandler implements Runnable {
 			return;
 		}
 	}
-
 }

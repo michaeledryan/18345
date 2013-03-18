@@ -9,7 +9,9 @@ import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import edu.cmu.ece.DCException;
 import edu.cmu.ece.packet.HTTPRequestPacket;
@@ -23,9 +25,12 @@ public class UDPRequestHandler {
 	private UDPManager udp = UDPManager.getInstance();
 	private UDPPacket backendRequest;
 	private HTTPRequestPacket frontendRequest;
+	private List<UDPPacket> packetsToSend = new ArrayList<UDPPacket>();
+	private int lastSent = 0;
 	private static int dataLength = 65507 - 12; // 2^16 - 20 (IP
-											// header) - 8 (UDP
-											// header) - 12 (header)
+
+	// header) - 8 (UDP
+	// header) - 12 (header)
 
 	/**
 	 * Constructor. Sets necessary fields.
@@ -124,7 +129,7 @@ public class UDPRequestHandler {
 			// This is not terribly memory efficient. I think we may need to
 			// write temp files? That could have weird repercussions on both
 			// sides, as well as managing total length vs header and data
-			// lengths
+			// lengths. 
 			int packetLength = (finalArray.length - bytesSent > dataLength) ? dataLength
 					: finalArray.length - bytesSent;
 
@@ -139,15 +144,17 @@ public class UDPRequestHandler {
 					backendRequest.getRemotePort(), currentByteArray, type,
 					seqNum);
 
-			udp.sendPacket(finalPacket.getPacket());
-			System.out.println("Sent with seqNum: " + seqNum);
+
+			packetsToSend.add(finalPacket);
 
 			bytesSent += packetLength;
 			seqNum++;
 
 		}
 
-		System.out.println("bytesSent: " + bytesSent + "; " + finalArray.length);
+		udp.sendPacket(packetsToSend.get(lastSent).getPacket());
+		System.out
+				.println("bytesSent: " + bytesSent + "; " + finalArray.length);
 	}
 
 	private void handle404() throws UnknownHostException {
@@ -162,4 +169,28 @@ public class UDPRequestHandler {
 				response.toString().getBytes(), UDPPacketType.END, 1);
 		udp.sendPacket(out.getPacket());
 	}
+
+	/**
+	 * Resends the last packet.
+	 */
+	public void resend() {
+		udp.sendPacket(packetsToSend.get(lastSent).getPacket());
+	}
+
+	/**
+	 * Sends the next packet
+	 */
+	public void sendNext(int seqNum) {
+
+		// if (seqNum != lastSent + 1) {
+		// lastSent = seqNum;
+		// }
+
+		if (lastSent + 1 < packetsToSend.size()) {
+
+			System.out.println("Sending packet " + (lastSent + 1));
+			udp.sendPacket(packetsToSend.get(++lastSent).getPacket());
+		}
+	}
+
 }

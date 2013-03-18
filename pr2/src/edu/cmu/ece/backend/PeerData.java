@@ -24,4 +24,20 @@ public class PeerData {
 	public String getIP() {
 		return ip;
 	}
+	
+	@Override
+	public boolean equals(Object obj){
+		if (!(obj instanceof PeerData)){
+			return false;
+		}
+		else {
+			PeerData pd = (PeerData) obj;
+			return pd.port == port && pd.ip.equals(ip);
+		}
+	}
+	
+	@Override
+	public int hashCode(){
+		return ip.hashCode() + port;
+	}
 }

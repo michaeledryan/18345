@@ -8,7 +8,7 @@ package edu.cmu.ece.packet;
  * I don't get Java enums either... I added END to signify EOF.
  */
 public enum UDPPacketType {
-	NONE(0), REQUEST(1), DATA(2), CONFIG(3), END (4);
+	NONE(0), REQUEST(1), DATA(2), CONFIG(3), END (4), ACK(5), NAK(6);
 	
 	private final int value;
   
@@ -26,6 +26,10 @@ public enum UDPPacketType {
 			return UDPPacketType.CONFIG;
 		case 4:
 			return UDPPacketType.END;
+		case 5:
+			return UDPPacketType.ACK;
+		case 6:
+			return UDPPacketType.NAK;
 		default:
 			return UDPPacketType.NONE;
 		}

@@ -117,7 +117,8 @@ public class HTTPClientHandler implements Runnable {
 	public void addToQueue(UDPPacket packet) {
 		// System.out.println("Added packet to queue");
 		if (packet.getSequenceNumber() != seqNum) {
-			System.out.println("Out of order!");
+			System.out.println("Out of order: " + packet.getSequenceNumber()
+					+ ", " + seqNum);
 			// TODO: Send a NAK?
 		}
 		seqNum++;
