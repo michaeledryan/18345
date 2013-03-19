@@ -8,8 +8,9 @@ import edu.cmu.ece.packet.UDPPacket;
 import edu.cmu.ece.packet.UDPPacketType;
 
 public class UDPPacketHandler implements Runnable {
-
 	private static RoutingTable router = RoutingTable.getInstance();
+	private static UDPSender sender = UDPSender.getInstance();
+	private static UDPManager udp = UDPManager.getInstance();
 	private UDPPacket packet;
 
 	public UDPPacketHandler(DatagramPacket incoming) {
@@ -35,28 +36,26 @@ public class UDPPacketHandler implements Runnable {
 		switch (packet.getType()) {
 		case REQUEST:
 			UDPRequestHandler handler = new UDPRequestHandler(packet);
-			handler.determineRequest();
+			int numPackets = handler.initializeRequest();
+			sender.requestToSend(handler, numPackets);
 			router.addToRequests(pd, handler);
-			// Trigger a UDPRequestHandler to find the file and send it out.
-			// MAke the handler visible so that we can get it later for ACKs
 			return;
+			// Trigger a UDPRequestHandler to find the file and send it out.
+			// Add the send request to our sending manager
+			// MAke the handler visible so that we can get it later for ACKs
 
 		case ACK:
 			if (router.getRequest(pd) != null) {
 				System.out.println("Got ACK");
-				router.getRequest(pd).sendNext(packet.getSequenceNumber());
+				UDPRequestHandler request = router.getRequest(pd);
+				sender.ackPacket(request, packet.getSequenceNumber());
 			}
 			return;
 			// We got the packet, so let's send another. We still have to
 			// implement timeouts.
 		case NAK:
-			pd = new PeerData(packet.getRemoteIP(), packet.getRemotePort(), 0);
-			if (router.getRequest(pd) != null) {
-				router.getRequest(pd).resend();
-			}
 			return;
-			// Send again? This is just stop-and-wait here... Not sure how to do
-			// timeouts.
+			// Currently there is no support for NAKs
 
 		case END:
 		case DATA:
@@ -66,20 +65,21 @@ public class UDPPacketHandler implements Runnable {
 			HTTPClientHandler client = router.getClientHandler(packet
 					.getClientID());
 			if (client == null) {
-				System.out.println("client ID not found.");
+				System.out.println("Client ID not found.");
+				return;
 			}
 
 			// Add to the HTTPClientHandler's queue.
 			client.addToQueue(packet);
+
+			// Ack this packet
 			try {
 				System.err.println("Sending ACK");
-				UDPManager.getInstance().sendPacket(
-						new UDPPacket(client.getClientID(), packet
+				udp.sendPacket(new UDPPacket(client.getClientID(), packet
 								.getRemoteIP(), packet.getRemotePort(),
 								new byte[0], UDPPacketType.ACK, packet
-										.getSequenceNumber() + 1).getPacket());
+										.getSequenceNumber()).getPacket());
 			} catch (UnknownHostException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			return;

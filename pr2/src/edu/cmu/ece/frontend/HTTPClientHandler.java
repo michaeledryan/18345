@@ -6,14 +6,12 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.PriorityBlockingQueue;
 
 import edu.cmu.ece.DCException;
 import edu.cmu.ece.backend.RoutingTable;
 import edu.cmu.ece.packet.HTTPRequestPacket;
 import edu.cmu.ece.packet.UDPPacket;
-import edu.cmu.ece.packet.UDPPacketType;
 
 /**
  * Manages a connection to a given client.
@@ -26,10 +24,9 @@ public class HTTPClientHandler implements Runnable {
 	private static int clientCount = 0;
 	private int id;
 	private boolean listening = true;
-	private Queue<UDPPacket> packetQueue = new ConcurrentLinkedQueue<UDPPacket>();
-	private int queueLimit;
-	private int seqNum = 1;
-	private boolean reachedEnd = false;
+
+	private PriorityBlockingQueue<UDPPacket> packetQueue = new PriorityBlockingQueue<UDPPacket>();
+	private int nextSeqNumToSend;
 
 	private Socket client;
 	private BufferedReader in;
@@ -73,6 +70,7 @@ public class HTTPClientHandler implements Runnable {
 				HTTPRequestHandler responder = new HTTPRequestHandler(id,
 						request, out, textOut);
 				responder.determineRequest();
+				nextSeqNumToSend = 0;
 
 				// Check if we must close the connection.
 				String connection = request.getHeader("Connection");
@@ -109,60 +107,42 @@ public class HTTPClientHandler implements Runnable {
 	}
 
 	/**
-	 * Adds a given UDPPacket to the client.
+	 * Adds a given UDPPacket to the client. Just adds everything
 	 * 
 	 * @param packet
 	 *            the packet to be added/
 	 */
 	public void addToQueue(UDPPacket packet) {
-		// System.out.println("Added packet to queue");
-		if (packet.getSequenceNumber() != seqNum) {
-			System.out.println("Out of order: " + packet.getSequenceNumber()
-					+ ", " + seqNum);
-			// TODO: Send a NAK?
-		}
-		seqNum++;
 		packetQueue.add(packet);
-		if (packet.getType() == UDPPacketType.END) {
-			System.out.println("GOT END");
-			reachedEnd = true;
-			queueLimit = packet.getSequenceNumber();
-			// System.out
-			// .println("sequence number: " + packet.getSequenceNumber());
-			// System.out.println("Queue size: " + packetQueue.size());
-		}
-		if (reachedEnd && (queueLimit == packetQueue.size())) {
-			// System.out.println("GOT EVERYTHING");
-			sendQueueToClient();
-		}
+		sendQueueToClient();
 	}
 
 	/**
-	 * Called when the queue has every necessary packet. Sends data to the
-	 * client.
+	 * Called any time we have received a packet. If we have the next packet in
+	 * order, then send everything we can.
 	 */
 	private void sendQueueToClient() {
-		System.out.print("Mirroring packet(s)...");
-		for (UDPPacket packet : packetQueue) {
+		while (packetQueue.peek().getSequenceNumber() == nextSeqNumToSend) {
+			System.out.print("Mirroring packet " + nextSeqNumToSend + "...");
+
+			UDPPacket packet;
+			try {
+				packet = packetQueue.take();
+			} catch (InterruptedException e1) {
+				System.out.println("Could not get packet to send to client.");
+				return;
+			}
+
 			byte[] packetData = packet.getData();
 			try {
 				out.write(packetData, 0, packetData.length);
-				// System.out.println(client.isClosed());
+				out.flush();
 			} catch (IOException e) {
-				e.printStackTrace();
+				System.out.println("Could not mirror packet to client.");
 			}
-		}
-		try {
-			out.flush();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 
-		packetQueue = new ConcurrentLinkedQueue<UDPPacket>();
-		reachedEnd = false;
-		queueLimit = 0;
-
+			nextSeqNumToSend++;
+		}
 	}
 
 }

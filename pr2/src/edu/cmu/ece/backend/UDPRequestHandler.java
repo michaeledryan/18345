@@ -8,8 +8,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
 
 import edu.cmu.ece.DCException;
 import edu.cmu.ece.packet.HTTPRequestPacket;
@@ -20,15 +18,13 @@ import edu.cmu.ece.packet.UDPPacket;
 import edu.cmu.ece.packet.UDPPacketType;
 
 public class UDPRequestHandler {
-	private UDPManager udp = UDPManager.getInstance();
 	private UDPPacket backendRequest;
 	private HTTPRequestPacket frontendRequest;
-	private List<UDPPacket> packetsToSend = new ArrayList<UDPPacket>();
 	
 	private String header;
 	private ResponseFileData fileData;
 	private int numPackets;
-	private int lastSent = 0;
+
 	private static int dataLength = 65507 - 12; // 2^16 - 20 (IP
 
 	// header) - 8 (UDP
@@ -64,7 +60,7 @@ public class UDPRequestHandler {
 	 * 
 	 * Returns the number of packets;
 	 */
-	public int intializeRequest() {
+	public int initializeRequest() {
 		// Check if the file exists locally
 		String filename = frontendRequest.getRequest();
 		File target = new File(filename);
@@ -104,10 +100,10 @@ public class UDPRequestHandler {
 	 * 
 	 * @throws UnknownHostException
 	 */
-	public UDPPacket getPacket(int seqNum) throws UnknownHostException {
+	public UDPPacket getPacket(int seqNum) {
 		// sequence number 0 is the header
+		UDPPacket packet = null;
 		if (seqNum == 0) {
-			UDPPacket packet = null;
 			try {
 				packet = new UDPPacket(backendRequest.getClientID(),
 						backendRequest.getRemoteIP(),
@@ -126,9 +122,14 @@ public class UDPRequestHandler {
 				: UDPPacketType.DATA;
 
 		// Create a packet from this output stream
-		UDPPacket packet = new UDPPacket(backendRequest.getClientID(),
-				backendRequest.getRemoteIP(), backendRequest.getRemotePort(),
-				out.toByteArray(), type, seqNum);
+		try {
+			packet = new UDPPacket(backendRequest.getClientID(),
+					backendRequest.getRemoteIP(),
+					backendRequest.getRemotePort(), out.toByteArray(), type,
+					seqNum);
+		} catch (UnknownHostException e) {
+			System.out.println("Couldn't respond to UDP client.");
+		}
 		return packet;
 	}
 }
