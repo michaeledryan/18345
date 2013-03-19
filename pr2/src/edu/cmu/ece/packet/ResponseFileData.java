@@ -9,66 +9,102 @@ import java.net.SocketException;
 
 public class ResponseFileData {
 	private static int BUF_MAX = 1 << 10;
+	private File target;
+	private HTTPRequestPacket request;
+	int[] lowers;
+	int[] uppers;
 
-	public static void sendFile(File target, HTTPRequestPacket request,
-			OutputStream out) {
-		// Store ranges to send as array of lower/upper bounds
+	public ResponseFileData(File in_target, HTTPRequestPacket in_request) {
+		target = in_target;
+		request = in_request;
+
+		// Determine ranges
 		request.parseRanges(target);
-		int[] lowers = request.getLowerRanges();
-		int[] uppers = request.getUpperRanges();
+		lowers = request.getLowerRanges();
+		uppers = request.getUpperRanges();
+	}
 
-		// Write content to the client. Break up the content to avoid OOMing
-		// over large loads.
+	/*
+	 * Given a maximum packet size, returns the number of packets it would take
+	 * to send this file
+	 */
+	public int getNumPackets(int packetSize) {
+		int result = 0;
+		for(int i = 0; i < lowers.length; i++){
+			int segmentSize = uppers[i]-lowers[i]+1;
+			result += (int) Math.ceil(((float) segmentSize) / packetSize);
+		}
+		return result;
+	}
+
+	/*
+	 * Given an output stream, a packet number and a packet size, gets the
+	 * packetNum-th packet that is at most packetSize big, and writes that to
+	 * the specified output stream.
+	 */
+	public void getPacketData(OutputStream out, int packetNum, int packetSize) {
+		// Determine which segment this packet is in
+		int segment = 0;
 		for (int i = 0; i < lowers.length; i++) {
-			int length = uppers[i] - lowers[i] + 1;
-			int currentLength = (length < BUF_MAX) ? length : BUF_MAX;
-			int bytesRead = 0;
-			byte[] buffer = new byte[currentLength];
-
-			FileInputStream file = null;
-			try {
-				file = new FileInputStream(target);
-				file.skip(lowers[i]);
-			} catch (FileNotFoundException e1) {
-				System.out.println("Couldn't find file. Should have 404'd.");
-			} catch (IOException e) {
-				System.out.println("Could not read/write file: "
-						+ e.getMessage());
+			segment = i;
+			int segmentSize = uppers[i] - lowers[i] + 1;
+			if (packetNum > segmentSize) {
+				packetNum -= segmentSize;
+			} else {
+				break;
 			}
+		}
 
-			// Read from file, write to client. Smallish buffer size keeps
-			// memory
-			// use reasonable.
-			while (bytesRead < length) {
-				try {
-					file.read(buffer, 0, currentLength);
-					out.write(buffer, 0, currentLength);
-					bytesRead += currentLength;
-					if (length - bytesRead < currentLength)
-						currentLength = length - bytesRead;
-				} catch (FileNotFoundException e) {
-					System.out
-							.println("Couldn't find file. Should have 404'd.");
-				} catch (IndexOutOfBoundsException e) {
-					System.out.println("Failed to copy to buffer: "
-							+ e.getMessage());
-				} catch (SocketException e) {
-					System.out.println("Failed to write to socket: "
-							+ e.getMessage());
-				} catch (IOException e) {
-					System.out.println("Could not read/write file: "
-							+ e.getMessage());
-				}
-			}
+		// Determine the file range
+		int lower = lowers[segment] + packetSize * packetNum;
+		int length = packetSize;
+		if (lower + packetSize > uppers[segment])
+			length = uppers[segment] - lower + 1;
 
-			// Close file and output stream.
-			try {
-				out.flush();
-				file.close();
-			} catch (IOException e) {
-				System.out.println("Could not read/write file: "
-						+ e.getMessage());
-			}
+		// Open the file to the desired location
+		FileInputStream file = null;
+		try {
+			file = new FileInputStream(target);
+			file.skip(lower);
+		} catch (FileNotFoundException e1) {
+			System.out.println("Couldn't find file. Should have 404'd.");
+		} catch (IOException e) {
+			System.out.println("Could not read/write file: "
+					+ e.getMessage());
+		}
+
+		// Write the file to the out buffer
+		byte[] buffer = new byte[length];
+		try {
+			file.read(buffer, 0, length);
+			out.write(buffer, 0, length);
+		} catch (FileNotFoundException e) {
+			System.out.println("Couldn't find file. Should have 404'd.");
+		} catch (IndexOutOfBoundsException e) {
+			System.out.println("Failed to copy to buffer: " + e.getMessage());
+		} catch (SocketException e) {
+			System.out.println("Failed to write to socket: " + e.getMessage());
+		} catch (IOException e) {
+			System.out.println("Could not read/write file: " + e.getMessage());
+		}
+
+		// Close file
+		try {
+			file.close();
+		} catch (IOException e) {
+			System.out.println("Could not close file: "
+					+ e.getMessage());
+		}
+	}
+
+	/*
+	 * Given an OutputStream for a socket, writes the entire file to that socket
+	 * using a maximum buffer size.
+	 */
+	public void sendFileToStream(OutputStream out) {
+		int numPackets = getNumPackets(BUF_MAX);
+		for (int i = 0; i < numPackets; i++) {
+			getPacketData(out, i, BUF_MAX);
 		}
 	}
 }

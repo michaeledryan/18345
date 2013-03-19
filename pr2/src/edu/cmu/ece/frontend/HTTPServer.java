@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-import edu.cmu.ece.backend.RoutingTable;
-
 /**
  * Main thread that spins off ClientHandlers to deal with connections.
  * 

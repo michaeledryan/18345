@@ -29,9 +29,9 @@ public class UDPPacketHandler implements Runnable {
 		 */
 
 		System.out.println("Packet Handler started.");
-
 		PeerData pd = new PeerData(packet.getRemoteIP(),
 				packet.getRemotePort(), 0);
+
 		switch (packet.getType()) {
 		case REQUEST:
 			UDPRequestHandler handler = new UDPRequestHandler(packet);

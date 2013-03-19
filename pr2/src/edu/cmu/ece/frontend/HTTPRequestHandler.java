@@ -9,8 +9,8 @@ import edu.cmu.ece.backend.PeerData;
 import edu.cmu.ece.backend.RoutingTable;
 import edu.cmu.ece.backend.UDPManager;
 import edu.cmu.ece.packet.HTTPRequestPacket;
-import edu.cmu.ece.packet.HTTPResponses;
 import edu.cmu.ece.packet.HTTPResponseHeader;
+import edu.cmu.ece.packet.HTTPResponses;
 import edu.cmu.ece.packet.ResponseFileData;
 import edu.cmu.ece.packet.UDPPacket;
 import edu.cmu.ece.packet.UDPPacketType;
@@ -181,6 +181,7 @@ public class HTTPRequestHandler {
 		textOut.write(header);
 		textOut.flush();
 
-		ResponseFileData.sendFile(target, request, out);
+		ResponseFileData fileData = new ResponseFileData(target, request);
+		fileData.sendFileToStream(out);
 	}
 }
