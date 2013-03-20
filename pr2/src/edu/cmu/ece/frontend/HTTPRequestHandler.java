@@ -163,7 +163,7 @@ public class HTTPRequestHandler {
 					remote.getPort(), requestString.getBytes(),
 					UDPPacketType.REQUEST, 1);
 			udp.sendPacket(backendRequest.getPacket());
-			System.out.println("Sent Packet.");
+			System.out.println("Sent remote request.");
 		} catch (UnknownHostException e) {
 			System.out.println("Invalid host provided in routing table.");
 		}

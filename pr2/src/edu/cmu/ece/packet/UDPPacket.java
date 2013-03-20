@@ -5,7 +5,7 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-public class UDPPacket {
+public class UDPPacket implements Comparable<UDPPacket> {
 	// Core packet elements
 	private DatagramPacket datagram;
 	private InetAddress remoteIP;
@@ -103,5 +103,10 @@ public class UDPPacket {
 
 	public DatagramPacket getPacket() {
 		return datagram;
+	}
+
+	@Override
+	public int compareTo(UDPPacket other) {
+		return sequenceNumber - other.getSequenceNumber();
 	}
 }

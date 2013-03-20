@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.PriorityBlockingQueue;
 
 import edu.cmu.ece.DCException;
@@ -26,6 +27,7 @@ public class HTTPClientHandler implements Runnable {
 	private boolean listening = true;
 
 	private PriorityBlockingQueue<UDPPacket> packetQueue = new PriorityBlockingQueue<UDPPacket>();
+	private ConcurrentSkipListSet<Integer> received = new ConcurrentSkipListSet<Integer>();
 	private int nextSeqNumToSend;
 
 	private Socket client;
@@ -40,7 +42,7 @@ public class HTTPClientHandler implements Runnable {
 	 *            the Socket connected to the client.yup
 	 * 
 	 * @param udp_man
-	 *            the global udp manager, so we know where to send our upd
+	 *            the global udp manager, so we know where to send our udp
 	 *            packets to
 	 * 
 	 * @throws IOException
@@ -70,7 +72,10 @@ public class HTTPClientHandler implements Runnable {
 				HTTPRequestHandler responder = new HTTPRequestHandler(id,
 						request, out, textOut);
 				responder.determineRequest();
+
+				// Clear received
 				nextSeqNumToSend = 0;
+				received.clear();
 
 				// Check if we must close the connection.
 				String connection = request.getHeader("Connection");
@@ -113,7 +118,19 @@ public class HTTPClientHandler implements Runnable {
 	 *            the packet to be added/
 	 */
 	public void addToQueue(UDPPacket packet) {
+		int seqNum = packet.getSequenceNumber();
+		if (received.contains(seqNum))
+ {
+			System.out.println("Rejected duplicate packet");
+			return;
+		}
+
 		packetQueue.add(packet);
+		received.add(seqNum);
+		System.out.println("Added packet " + packet.getSequenceNumber()
+				+ " to queue (size " + packetQueue.size() + ", next "
+				+ nextSeqNumToSend + ").");
+
 		sendQueueToClient();
 	}
 
@@ -122,8 +139,13 @@ public class HTTPClientHandler implements Runnable {
 	 * order, then send everything we can.
 	 */
 	private void sendQueueToClient() {
-		while (packetQueue.peek().getSequenceNumber() == nextSeqNumToSend) {
-			System.out.print("Mirroring packet " + nextSeqNumToSend + "...");
+		if (packetQueue.isEmpty()
+				|| packetQueue.peek().getSequenceNumber() > nextSeqNumToSend)
+			return;
+
+		while (!packetQueue.isEmpty()
+				&& packetQueue.peek().getSequenceNumber() == nextSeqNumToSend) {
+			System.out.println("Mirroring packet " + nextSeqNumToSend + "...");
 
 			UDPPacket packet;
 			try {

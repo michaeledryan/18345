@@ -46,7 +46,7 @@ public class UDPPacketHandler implements Runnable {
 
 		case ACK:
 			if (router.getRequest(pd) != null) {
-				System.out.println("Got ACK");
+				System.out.println("Got ACK " + packet.getSequenceNumber());
 				UDPRequestHandler request = router.getRequest(pd);
 				sender.ackPacket(request, packet.getSequenceNumber());
 			}
@@ -62,6 +62,9 @@ public class UDPPacketHandler implements Runnable {
 			// Get the client that requested the packet and give him the data
 			// to respond over TCP
 
+			System.out.println("Received data packet "
+					+ packet.getSequenceNumber() + " for client "
+					+ packet.getClientID());
 			HTTPClientHandler client = router.getClientHandler(packet
 					.getClientID());
 			if (client == null) {
@@ -74,7 +77,7 @@ public class UDPPacketHandler implements Runnable {
 
 			// Ack this packet
 			try {
-				System.err.println("Sending ACK");
+				System.err.println("Sending ACK " + packet.getSequenceNumber());
 				udp.sendPacket(new UDPPacket(client.getClientID(), packet
 								.getRemoteIP(), packet.getRemotePort(),
 								new byte[0], UDPPacketType.ACK, packet
@@ -82,6 +85,7 @@ public class UDPPacketHandler implements Runnable {
 			} catch (UnknownHostException e) {
 				e.printStackTrace();
 			}
+			System.out.println("Done receiving data packet.");
 			return;
 
 		case CONFIG:

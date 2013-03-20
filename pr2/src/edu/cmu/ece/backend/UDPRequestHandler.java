@@ -101,6 +101,7 @@ public class UDPRequestHandler {
 	 * @throws UnknownHostException
 	 */
 	public UDPPacket getPacket(int seqNum) {
+		System.out.println("Packet " + seqNum + " requested.");
 		// sequence number 0 is the header
 		UDPPacket packet = null;
 		if (seqNum == 0) {
@@ -108,7 +109,7 @@ public class UDPRequestHandler {
 				packet = new UDPPacket(backendRequest.getClientID(),
 						backendRequest.getRemoteIP(),
 						backendRequest.getRemotePort(), header.getBytes(),
-						UDPPacketType.END, 1);
+						UDPPacketType.END, 0);
 			} catch (UnknownHostException e) {
 				e.printStackTrace();
 			}

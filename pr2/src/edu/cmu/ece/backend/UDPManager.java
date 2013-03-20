@@ -29,7 +29,8 @@ public class UDPManager implements Runnable {
 		// Open a socket, set its timeout to let us send outgoing packets
 		try {
 			socket = new DatagramSocket(portNum);
-			System.out.format("Now listening for UDP on port %d\n", portNum);
+			System.out.format("Now listening for UDP on port %d, thread "
+					+ Thread.currentThread().getId() + "\n", portNum);
 		} catch (IOException e) {
 			System.out.format("Could not listen for UDP on port %d\n", portNum);
 			System.exit(-1);
@@ -44,7 +45,7 @@ public class UDPManager implements Runnable {
 				packet = new DatagramPacket(new byte[packetLength],
 						packetLength);
 				socket.receive(packet);
-				System.out.println("Packet found:");
+				System.out.println("Packet found.");
 				// Handle packet then loop back
 				UDPPacketHandler handle = new UDPPacketHandler(packet);
 				new Thread(handle).start();
@@ -59,6 +60,7 @@ public class UDPManager implements Runnable {
 	public void sendPacket(DatagramPacket packet) {
 		try {
 			socket.send(packet);
+			System.out.println("Packet sent.");
 		} catch (IOException e) {
 			System.out.println("Could not send packet on UDP." + e.getMessage());
 		}

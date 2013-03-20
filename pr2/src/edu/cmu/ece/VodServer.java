@@ -1,6 +1,7 @@
 package edu.cmu.ece;
 
 import edu.cmu.ece.backend.UDPManager;
+import edu.cmu.ece.backend.UDPSender;
 import edu.cmu.ece.frontend.HTTPServer;
 
 /**
@@ -46,6 +47,7 @@ public class VodServer {
 		UDPManager.setPort(udpPort);
 		HTTPServer http = new HTTPServer(httpPort);
 		new Thread(UDPManager.getInstance()).start();
+		new Thread(UDPSender.getInstance()).start();
 		new Thread(http).start();
 	}
 

@@ -34,6 +34,7 @@ public class UDPSender implements Runnable {
 	public void run() {
 		while (true) {
 			if (!queue.isEmpty()) {
+				System.out.println("Sending UDP packet...");
 				UDPPacketSender sender = queue.remove();
 				sender.send(udp);
 			}
@@ -44,6 +45,7 @@ public class UDPSender implements Runnable {
 	 * Add a request to send numPackets packets to our send queue.
 	 */
 	public void requestToSend(UDPRequestHandler request, int numPackets) {
+		System.out.println("Request to send UDP packets.");
 		for (int i = 0; i < numPackets; i++) {
 			UDPPacketSender sender = new UDPPacketSender(request, i, timeout);
 			queue.add(sender);
@@ -59,9 +61,14 @@ public class UDPSender implements Runnable {
 		UDPRequestHandler requester = request.getRequester();
 		int seqNum = request.getSeqNum();
 
+		// Recreate requester so we can reschedule it... TimerTask is dumb
+		UDPPacketSender newRequest = new UDPPacketSender(requester, seqNum,
+				timeout);
+
 		ConcurrentSkipListSet<Integer> acked = received.get(requester);
 		if (!acked.contains(seqNum)) {
-			queue.add(request);
+			System.out.println("Request to resend UDP packet " + seqNum + ".");
+			queue.add(newRequest);
 		}
 	}
 

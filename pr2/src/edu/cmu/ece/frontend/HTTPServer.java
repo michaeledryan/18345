@@ -33,7 +33,8 @@ public class HTTPServer implements Runnable {
 		// open a socket
 		try {
 			socket = new ServerSocket(portNum);
-			System.out.format("Now listening for HTTP on port %d\n", portNum);
+			System.out.format("Now listening for HTTP on port %d, thread "
+					+ Thread.currentThread().getId() + "\n", portNum);
 		} catch (IOException e) {
 			System.out
 					.format("Could not listen for HTTP on port %d\n", portNum);

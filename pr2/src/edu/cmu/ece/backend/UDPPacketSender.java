@@ -4,7 +4,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class UDPPacketSender extends TimerTask {
-	private UDPSender sender;
+	private UDPSender sender = UDPSender.getInstance();
 	private UDPRequestHandler requester;
 	private int seqNum;
 	private long timeout;
@@ -17,6 +17,7 @@ public class UDPPacketSender extends TimerTask {
 	}
 
 	public void send(UDPManager udp) {
+		System.out.println("Sending packet " + seqNum + ".");
 		udp.sendPacket(requester.getPacket(seqNum).getPacket());
 		new Timer().schedule(this, timeout);
 	}
