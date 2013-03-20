@@ -55,7 +55,6 @@ public class HTTPRequestHandler {
 		String requested = request.getRequest();
 		if (requested.startsWith("/"))
 			requested = requested.substring(1);
-		System.out.println("Request: " + requested);
 		if (requested.startsWith("peer/")) {
 			// First check if we need to add to the routing table
 			if (requested.startsWith("add?", 5)) {
@@ -67,14 +66,12 @@ public class HTTPRequestHandler {
 			if (requested.startsWith("config?", 5)) {
 				// Handle mystery peer config
 				handlePeerConfig(requested.substring(12));
-				System.out.println("handled.");
 				return;
 			}
 
 			// Otherwise we have a file request... Look it up and either handle
 			// the request or response with a 404
 			String file = requested.substring(10);
-			System.out.println("Remote file request for: " + file);
 			if (RoutingTable.getInstance().checkPath(file)) {
 				handleRemoteRequest(file);
 				return;
@@ -92,6 +89,7 @@ public class HTTPRequestHandler {
 			this.handleLocalRequest(target);
 			return;
 		} else {
+			System.out.println("HTTP Request\n\t404 Not Found");
 			HTTPResponses.send404(request, textOut);
 			return;
 		}
@@ -115,10 +113,11 @@ public class HTTPRequestHandler {
 			else if (keyValue[0].equals("rate"))
 				rate = keyValue[1];
 		}
-		System.out.println("Parameters:" + parameters);
-		System.out.println("Config request with parameters:");
-		System.out.println("File " + path + " can be found on " + host + ":"
-				+ port + " with bitrate " + rate + ".");
+		System.out.println("HTTP Request");
+		System.out.println("\tConfig request with parameters:");
+		System.out.println("\t\tFile: " + path);
+		System.out.println("\t\tPath: " + host + ":" + port);
+		System.out.println("\t\tBitrate: " + rate);
 
 		
 		PeerData peerdata = new PeerData(host, Integer.parseInt(port), Integer
@@ -132,8 +131,9 @@ public class HTTPRequestHandler {
 	}
 
 	private void handlePeerConfig(String parameters) {
-		System.out.println("Config request with parameters:");
-		System.out.println(parameters);
+		System.out.println("HTTP Request");
+		System.out.println("\tConfig request with parameters:");
+		System.out.println("\t\t" + parameters);
 		
 		int rate = Integer.parseInt(parameters.split("=")[1]);
 		
@@ -147,8 +147,8 @@ public class HTTPRequestHandler {
 		/*
 		 * Look up file in the routing table. If it isn't found, send a 404
 		 */
-		System.out.println("Remote request!");
-		System.out.println(target);
+		System.out.println("HTTP Request");
+		System.out.println("\tRemote request for: " + target);
 		PeerData remote = router.getPeerData(target);
 		if (remote == null) {
 			HTTPResponses.send404(request, textOut);
@@ -163,9 +163,8 @@ public class HTTPRequestHandler {
 					remote.getPort(), requestString.getBytes(),
 					UDPPacketType.REQUEST, 1);
 			udp.sendPacket(backendRequest.getPacket());
-			System.out.println("Sent remote request.");
 		} catch (UnknownHostException e) {
-			System.out.println("Invalid host provided in routing table.");
+			System.err.println("Invalid host provided in routing table.");
 		}
 
 		/*
@@ -177,6 +176,8 @@ public class HTTPRequestHandler {
 
 	private void handleLocalRequest(File target) {
 		// Generate and write headers to client.
+		System.out.println("HTTP Request");
+		System.out.println("\tLocal request for: " + target);
 		String header = HTTPResponseHeader.makeHeader(target, request);
 		textOut.write(header);
 		textOut.flush();

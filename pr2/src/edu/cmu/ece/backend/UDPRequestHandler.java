@@ -25,7 +25,9 @@ public class UDPRequestHandler {
 	private ResponseFileData fileData;
 	private int numPackets;
 
-	private static int dataLength = 65507 - 12; // 2^16 - 20 (IP
+	private static int dataLength = 65000;
+
+	// private static int dataLength = 65507 - 25000 - 12; // 2^16 - 20 (IP
 
 	// header) - 8 (UDP
 	// header) - 12 (header)
@@ -49,7 +51,7 @@ public class UDPRequestHandler {
 			// Shouldn't happen
 			e.printStackTrace();
 		} catch (IOException e) {
-			System.out
+			System.err
 					.println("Couldn't convert UDP packet request to HTTP header.");
 		}
 	}
@@ -72,7 +74,7 @@ public class UDPRequestHandler {
 				numPackets = 1 + fileData.getNumPackets(dataLength);
 				generateFileHeader(target);
 			} catch (UnknownHostException e) {
-				System.out.println("Couldn't respond to UDP client.");
+				System.err.println("Couldn't respond to UDP client.");
 			}
 		} else {
 				numPackets = 1;
@@ -83,7 +85,6 @@ public class UDPRequestHandler {
 
 	private void generateFileHeader(File target) throws UnknownHostException {
 		// Generate and write headers to client.
-		System.out.println("Handling request...");
 		header = HTTPResponseHeader.makeHeader(target, frontendRequest);
 	}
 
@@ -101,7 +102,6 @@ public class UDPRequestHandler {
 	 * @throws UnknownHostException
 	 */
 	public UDPPacket getPacket(int seqNum) {
-		System.out.println("Packet " + seqNum + " requested.");
 		// sequence number 0 is the header
 		UDPPacket packet = null;
 		if (seqNum == 0) {
@@ -129,7 +129,7 @@ public class UDPRequestHandler {
 					backendRequest.getRemotePort(), out.toByteArray(), type,
 					seqNum);
 		} catch (UnknownHostException e) {
-			System.out.println("Couldn't respond to UDP client.");
+			System.err.println("Couldn't respond to UDP client.");
 		}
 		return packet;
 	}

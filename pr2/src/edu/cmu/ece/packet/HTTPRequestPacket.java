@@ -29,13 +29,6 @@ public class HTTPRequestPacket {
 		// First parse the header line to get the request
 		String line = packet.readLine();
 
-		System.out.println("Line: " + line);
-		// Get the request from the middle field
-		/*if ((line != null) && (line.equals("HTTP/1.1 200 OK"))) {
-			for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
- 			   System.out.println(ste);
- 			 }
-		}*/
 		if (line == null)
 			throw new DCException();
 		String[] tokens = line.split(" ");

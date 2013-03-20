@@ -19,22 +19,14 @@ public class UDPPacketHandler implements Runnable {
 
 	@Override
 	public void run() {
-
-		/*
-		 * TODO: parse packet for request type If it is a response packet, then
-		 * look up the clientID in the routing table, and call
-		 * mirrorPacketToClient on the data.
-		 * 
-		 * If it is a request packet, create a new UDPRequestHandler to send the
-		 * data back with the file path in question back to the source client
-		 */
-
-		System.out.println("Packet Handler started.");
+		// Get peer data to look up in routing table
+		System.out.println("UDP packet received.");
 		PeerData pd = new PeerData(packet.getRemoteIP(),
 				packet.getRemotePort(), 0);
 
 		switch (packet.getType()) {
 		case REQUEST:
+			System.out.println("\tRequest for content over UDP.");
 			UDPRequestHandler handler = new UDPRequestHandler(packet);
 			int numPackets = handler.initializeRequest();
 			sender.requestToSend(handler, numPackets);
@@ -46,7 +38,8 @@ public class UDPPacketHandler implements Runnable {
 
 		case ACK:
 			if (router.getRequest(pd) != null) {
-				System.out.println("Got ACK " + packet.getSequenceNumber());
+				System.out.println("\tGot UDP ACK "
+						+ packet.getSequenceNumber());
 				UDPRequestHandler request = router.getRequest(pd);
 				sender.ackPacket(request, packet.getSequenceNumber());
 			}
@@ -61,14 +54,11 @@ public class UDPPacketHandler implements Runnable {
 		case DATA:
 			// Get the client that requested the packet and give him the data
 			// to respond over TCP
-
-			System.out.println("Received data packet "
-					+ packet.getSequenceNumber() + " for client "
-					+ packet.getClientID());
+			System.out.println("\tResponse content received over UDP.");
 			HTTPClientHandler client = router.getClientHandler(packet
 					.getClientID());
 			if (client == null) {
-				System.out.println("Client ID not found.");
+				System.err.println("Client ID not found.");
 				return;
 			}
 
@@ -77,7 +67,6 @@ public class UDPPacketHandler implements Runnable {
 
 			// Ack this packet
 			try {
-				System.err.println("Sending ACK " + packet.getSequenceNumber());
 				udp.sendPacket(new UDPPacket(client.getClientID(), packet
 								.getRemoteIP(), packet.getRemotePort(),
 								new byte[0], UDPPacketType.ACK, packet
@@ -85,11 +74,11 @@ public class UDPPacketHandler implements Runnable {
 			} catch (UnknownHostException e) {
 				e.printStackTrace();
 			}
-			System.out.println("Done receiving data packet.");
 			return;
 
 		case CONFIG:
 			// TODO: I have no idea. For now, fall through to default
+			System.out.println("\tUDP config request");
 
 		default:
 			// Do nothing - ignore invalid requests

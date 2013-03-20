@@ -67,32 +67,32 @@ public class ResponseFileData {
 			file = new FileInputStream(target);
 			file.skip(lower);
 		} catch (FileNotFoundException e1) {
-			System.out.println("Couldn't find file. Should have 404'd.");
+			System.err.println("Couldn't find file. Should have 404'd.");
 		} catch (IOException e) {
-			System.out.println("Could not read/write file: "
+			System.err.println("Could not read/write file: "
 					+ e.getMessage());
 		}
 
-		// Write the file to the out buffer
+		// Write the file to the.err buffer
 		byte[] buffer = new byte[length];
 		try {
 			file.read(buffer, 0, length);
 			out.write(buffer, 0, length);
 		} catch (FileNotFoundException e) {
-			System.out.println("Couldn't find file. Should have 404'd.");
+			System.err.println("Couldn't find file. Should have 404'd.");
 		} catch (IndexOutOfBoundsException e) {
-			System.out.println("Failed to copy to buffer: " + e.getMessage());
+			System.err.println("Failed to copy to buffer: " + e.getMessage());
 		} catch (SocketException e) {
-			System.out.println("Failed to write to socket: " + e.getMessage());
+			System.err.println("Failed to write to socket: " + e.getMessage());
 		} catch (IOException e) {
-			System.out.println("Could not read/write file: " + e.getMessage());
+			System.err.println("Could not read/write file: " + e.getMessage());
 		}
 
 		// Close file
 		try {
 			file.close();
 		} catch (IOException e) {
-			System.out.println("Could not close file: "
+			System.err.println("Could not close file: "
 					+ e.getMessage());
 		}
 	}

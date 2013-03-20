@@ -24,14 +24,14 @@ public class VodServer {
 		// Parse args
 		if (args.length > 1) {
 			if (args.length > 2) {
-				System.out.println("Discarding extra args.");
+				System.err.println("Discarding extra args.");
 			}
 
 			try {
 				httpPort = Integer.parseInt(args[0]);
 				udpPort = Integer.parseInt(args[1]);
 			} catch (NumberFormatException e) {
-				System.out.println("Port must be an integer");
+				System.err.println("Port must be an integer");
 				System.exit(1);
 			}
 		}

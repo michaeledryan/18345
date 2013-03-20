@@ -66,11 +66,12 @@ public class HTTPClientHandler implements Runnable {
 
 		while (listening) {
 			try {
-
 				// Parse request, send response
 				request = new HTTPRequestPacket(in);
 				HTTPRequestHandler responder = new HTTPRequestHandler(id,
 						request, out, textOut);
+
+				// System.out.println("HTTP request received, client " + id);
 				responder.determineRequest();
 
 				// Clear received
@@ -82,7 +83,7 @@ public class HTTPClientHandler implements Runnable {
 				if (connection != null && connection.equalsIgnoreCase("close"))
 					listening = false;
 			} catch (IOException e) {
-				System.out.format(
+				System.err.format(
 						"Failed to read request packet for client %d: %s\n",
 						id, e.getMessage());
 				listening = false;
@@ -120,16 +121,10 @@ public class HTTPClientHandler implements Runnable {
 	public void addToQueue(UDPPacket packet) {
 		int seqNum = packet.getSequenceNumber();
 		if (received.contains(seqNum))
- {
-			System.out.println("Rejected duplicate packet");
 			return;
-		}
 
 		packetQueue.add(packet);
 		received.add(seqNum);
-		System.out.println("Added packet " + packet.getSequenceNumber()
-				+ " to queue (size " + packetQueue.size() + ", next "
-				+ nextSeqNumToSend + ").");
 
 		sendQueueToClient();
 	}
@@ -145,13 +140,11 @@ public class HTTPClientHandler implements Runnable {
 
 		while (!packetQueue.isEmpty()
 				&& packetQueue.peek().getSequenceNumber() == nextSeqNumToSend) {
-			System.out.println("Mirroring packet " + nextSeqNumToSend + "...");
-
 			UDPPacket packet;
 			try {
 				packet = packetQueue.take();
 			} catch (InterruptedException e1) {
-				System.out.println("Could not get packet to send to client.");
+				System.err.println("Could not get packet to send to client.");
 				return;
 			}
 
@@ -160,7 +153,7 @@ public class HTTPClientHandler implements Runnable {
 				out.write(packetData, 0, packetData.length);
 				out.flush();
 			} catch (IOException e) {
-				System.out.println("Could not mirror packet to client.");
+				System.err.println("Could not mirror packet to client.");
 			}
 
 			nextSeqNumToSend++;
