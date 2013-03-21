@@ -18,7 +18,7 @@ public class HTTPRequestPacket {
 	private Map<String, String> headers = new HashMap<String, String>();
 	private String headerString;
 
-	private String fullRangeString;
+	private String fullRangeString = "";
 	private int[] lowerRanges;
 	private int[] upperRanges;
 	private int totalRangeLength;

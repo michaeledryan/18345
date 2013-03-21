@@ -20,12 +20,15 @@ public class UDPPacketHandler implements Runnable {
 	@Override
 	public void run() {
 		// Get peer data to look up in routing table
-		System.out.println("UDP packet received.");
+		System.out.println("UDP packet received from clientID" + packet.getClientID());
 		PeerData pd = new PeerData(packet.getRemoteIP(),
-				packet.getRemotePort(), 0);
+				packet.getRemotePort(), packet.getClientID());
 
 		switch (packet.getType()) {
 		case REQUEST:
+			if (router.getRequest(pd) != null) {
+				router.getRequest(pd).kill();
+			}
 			System.out.println("\tRequest for content over UDP.");
 			UDPRequestHandler handler = new UDPRequestHandler(packet);
 			int numPackets = handler.initializeRequest();
@@ -54,7 +57,9 @@ public class UDPPacketHandler implements Runnable {
 		case DATA:
 			// Get the client that requested the packet and give him the data
 			// to respond over TCP
-			System.out.println("\tResponse content received over UDP.");
+			System.out
+					.println("\tResponse content received over UDP with seqNum = "
+							+ packet.getSequenceNumber());
 			HTTPClientHandler client = router.getClientHandler(packet
 					.getClientID());
 			if (client == null) {
@@ -65,12 +70,13 @@ public class UDPPacketHandler implements Runnable {
 			// Add to the HTTPClientHandler's queue.
 			client.addToQueue(packet);
 
+
 			// Ack this packet
 			try {
 				udp.sendPacket(new UDPPacket(client.getClientID(), packet
-								.getRemoteIP(), packet.getRemotePort(),
-								new byte[0], UDPPacketType.ACK, packet
-										.getSequenceNumber()).getPacket());
+						.getRemoteIP(), packet.getRemotePort(), new byte[0],
+						UDPPacketType.ACK, packet.getSequenceNumber())
+						.getPacket());
 			} catch (UnknownHostException e) {
 				e.printStackTrace();
 			}

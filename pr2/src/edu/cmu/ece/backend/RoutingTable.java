@@ -14,7 +14,8 @@ public class RoutingTable {
 	private Map<PeerData, UDPRequestHandler> peersToRequests = new ConcurrentHashMap<PeerData, UDPRequestHandler>();
 
 	/**
-	 * Returns the instance of RoutingTable.  
+	 * Returns the instance of RoutingTable.
+	 * 
 	 * @return the singleton instance.
 	 */
 	public static RoutingTable getInstance() {
@@ -30,10 +31,11 @@ public class RoutingTable {
 	}
 
 	/**
-	 * Adds to the map of PeerDatas to UDPRequestHandlers 
+	 * Adds to the map of PeerDatas to UDPRequestHandlers
 	 * 
 	 */
-	public UDPRequestHandler addToRequests(PeerData pd, UDPRequestHandler handler) {
+	public UDPRequestHandler addToRequests(PeerData pd,
+			UDPRequestHandler handler) {
 		synchronized (peersToRequests) {
 			return peersToRequests.put(pd, handler);
 		}
@@ -60,7 +62,7 @@ public class RoutingTable {
 	}
 
 	/**
-	 * Checks if a given PeerData is in the table. 
+	 * Checks if a given PeerData is in the table.
 	 * 
 	 */
 	public boolean CheckPD(PeerData pd) {
@@ -68,7 +70,7 @@ public class RoutingTable {
 			return peersToRequests.containsKey(pd);
 		}
 	}
-	
+
 	/**
 	 * Checks if a clientID is in the table.
 	 */
@@ -84,7 +86,7 @@ public class RoutingTable {
 	}
 
 	/**
-	 * Removes a PeerData from peersToRequests 
+	 * Removes a PeerData from peersToRequests
 	 * 
 	 */
 	public UDPRequestHandler removeRequest(PeerData pd) {
@@ -92,9 +94,9 @@ public class RoutingTable {
 			return peersToRequests.remove(pd);
 		}
 	}
-	
+
 	/**
-	 *	Removes an ID from the table. 
+	 * Removes an ID from the table.
 	 */
 	public HTTPClientHandler removeId(int clientID) {
 		synchronized (idsToClientHandlers) {
@@ -119,14 +121,14 @@ public class RoutingTable {
 	}
 
 	/**
-	 * Gets PeerData given file path. 
+	 * Gets PeerData given file path.
 	 */
 	public PeerData getPeerData(String path) {
 		return fileNamesToPeerData.get(path);
 	}
 
 	/**
-	 * Gets a Request given a PeerData 
+	 * Gets a Request given a PeerData
 	 * 
 	 */
 	public UDPRequestHandler getRequest(PeerData pd) {
@@ -134,7 +136,7 @@ public class RoutingTable {
 			return peersToRequests.get(pd);
 		}
 	}
-	
+
 	/**
 	 * Gets the current bit rate in bits/second.
 	 */

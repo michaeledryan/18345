@@ -17,13 +17,17 @@ public class UDPPacketSender extends TimerTask {
 	}
 
 	public void send(UDPManager udp) {
-		udp.sendPacket(requester.getPacket(seqNum).getPacket());
-		new Timer().schedule(this, timeout);
+		if (requester.isAlive()) {
+			udp.sendPacket(requester.getPacket(seqNum).getPacket());
+			new Timer().schedule(this, timeout);
+		}
 	}
 
 	@Override
 	public void run() {
-		sender.requestResend(this);
+		if (requester.isAlive()) {
+			sender.requestResend(this);
+		}
 	}
 
 	public UDPRequestHandler getRequester() {

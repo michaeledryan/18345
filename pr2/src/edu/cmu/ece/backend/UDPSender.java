@@ -4,13 +4,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
 
-
 public class UDPSender implements Runnable {
 	private static UDPSender instance = null;
 	private UDPManager udp = UDPManager.getInstance();
-	
+
 	private static long timeout = 1000; // ms
-	
+
 	ConcurrentHashMap<UDPRequestHandler, ConcurrentSkipListSet<Integer>> received;
 	ConcurrentLinkedQueue<UDPPacketSender> queue;
 
@@ -33,9 +32,17 @@ public class UDPSender implements Runnable {
 	@Override
 	public void run() {
 		while (true) {
+			try {
+				Thread.sleep(50);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			if (!queue.isEmpty()) {
-				UDPPacketSender sender = queue.remove();
-				sender.send(udp);
+				while (!queue.isEmpty()) {
+					UDPPacketSender sender = queue.remove();
+					sender.send(udp);
+				}
 			}
 		}
 	}
@@ -59,18 +66,20 @@ public class UDPSender implements Runnable {
 		UDPRequestHandler requester = request.getRequester();
 		int seqNum = request.getSeqNum();
 
-		// Recreate requester so we can reschedule it... TimerTask is dumb
-		UDPPacketSender newRequest = new UDPPacketSender(requester, seqNum,
-				timeout);
-
 		ConcurrentSkipListSet<Integer> acked = received.get(requester);
 		if (!acked.contains(seqNum)) {
+			// System.out.println(acked.toString());
+			// Recreate requester so we can reschedule it... TimerTask is dumb
+			UDPPacketSender newRequest = new UDPPacketSender(requester, seqNum,
+					timeout);
 			queue.add(newRequest);
 		}
 	}
 
-	public void ackPacket(UDPRequestHandler request, int seqNum) {
-		ConcurrentSkipListSet<Integer> acked = received.get(request);
+	public void ackPacket(UDPRequestHandler requester, int seqNum) {
+		ConcurrentSkipListSet<Integer> acked = received.get(requester);
 		acked.add(seqNum);
+		received.put(requester, acked);
+
 	}
 }

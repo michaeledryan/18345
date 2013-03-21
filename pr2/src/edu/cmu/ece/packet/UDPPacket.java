@@ -4,6 +4,8 @@ import java.lang.reflect.Array;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 public class UDPPacket implements Comparable<UDPPacket> {
 	// Core packet elements
@@ -14,14 +16,14 @@ public class UDPPacket implements Comparable<UDPPacket> {
 	// Custom packet header
 	public final int HEADER_SIZE = 3;
 	private int clientID;
-	
+
 	private int sequenceNumber;
 	private UDPPacketType type;
 
 	// Custom packet body
 	private byte[] body;
 	private int dataLength; // Length of the data being sent, excluding header
-
+	
 	// Constructor to parse in received packet
 	public UDPPacket(DatagramPacket packet) {
 		// Get raw packet information from UDP
@@ -33,14 +35,17 @@ public class UDPPacket implements Comparable<UDPPacket> {
 		remotePort = packet.getPort();
 
 		// Parse out custom packet header from data
-		clientID = Array.getInt(body, 0);
-		sequenceNumber = Array.getInt(body, 1);
-		type = UDPPacketType.fromInt(Array.getInt(body, 2));
+		clientID = ByteBuffer.wrap(Arrays.copyOfRange(body, 0, 4)).getInt();
+		sequenceNumber = ByteBuffer.wrap(Arrays.copyOfRange(body, 4, 8))
+				.getInt();
+		type = UDPPacketType.fromInt(ByteBuffer.wrap(
+				Arrays.copyOfRange(body, 8, 12)).getInt());
 	}
 
 	// Constructor to create new packet to send
 	public UDPPacket(int client, String destinationIP, int destinationPort,
-			byte[] data, UDPPacketType type, int seqNum) throws UnknownHostException {
+			byte[] data, UDPPacketType type, int seqNum)
+			throws UnknownHostException {
 		// Create the UDP header
 		remoteIP = InetAddress.getByName(destinationIP);
 		remotePort = destinationPort;
@@ -55,15 +60,21 @@ public class UDPPacket implements Comparable<UDPPacket> {
 		 */
 
 		body = new byte[data.length + HEADER_SIZE * Integer.SIZE / 8];
-		
-		/* TODO: Make this set integers... seems to be giving us bogus headers.
-		*/
-		
+
+		/*
+		 * TODO: Make this set integers... seems to be giving us bogus headers.
+		 */
+
 		// This still works for 1-byte numbers....
-		
-		Array.setByte(body, 0, (byte) client);
-		Array.setByte(body, 1, (byte) sequenceNumber);
-		Array.setByte(body, 2, (byte) type.getValue());
+
+		byte[] clientArray = ByteBuffer.allocate(4).putInt(client).array();
+		byte[] seqArray = ByteBuffer.allocate(4).putInt(sequenceNumber).array();
+		byte[] typeArray = ByteBuffer.allocate(4).putInt(type.getValue())
+				.array();
+
+		System.arraycopy(clientArray, 0, body, 0, 4);
+		System.arraycopy(seqArray, 0, body, 4, 4);
+		System.arraycopy(typeArray, 0, body, 8, 4);
 
 		System.arraycopy(data, 0, body, HEADER_SIZE * Integer.SIZE / 8,
 				data.length);
@@ -76,7 +87,7 @@ public class UDPPacket implements Comparable<UDPPacket> {
 	public String getRemoteIP() {
 		return remoteIP.getHostAddress();
 	}
-	
+
 	public int getSequenceNumber() {
 		return sequenceNumber;
 	}

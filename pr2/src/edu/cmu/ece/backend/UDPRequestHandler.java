@@ -24,13 +24,10 @@ public class UDPRequestHandler {
 	private String header;
 	private ResponseFileData fileData;
 	private int numPackets;
+	private boolean alive = true;
 
 	private static int dataLength = 65000;
 
-	// private static int dataLength = 65507 - 25000 - 12; // 2^16 - 20 (IP
-
-	// header) - 8 (UDP
-	// header) - 12 (header)
 
 	/**
 	 * Constructor. Sets necessary fields.
@@ -132,5 +129,13 @@ public class UDPRequestHandler {
 			System.err.println("Couldn't respond to UDP client.");
 		}
 		return packet;
+	}
+	
+	public void kill() {
+		alive = false;
+	}
+	
+	public boolean isAlive() {
+		return alive;
 	}
 }

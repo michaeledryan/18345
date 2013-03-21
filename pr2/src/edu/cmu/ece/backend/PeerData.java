@@ -32,12 +32,12 @@ public class PeerData {
 		}
 		else {
 			PeerData pd = (PeerData) obj;
-			return pd.port == port && pd.ip.equals(ip);
+			return pd.port == port && pd.ip.equals(ip) && rate == rate;
 		}
 	}
 	
 	@Override
 	public int hashCode(){
-		return ip.hashCode() + port;
+		return ip.hashCode() + port * rate;
 	}
 }

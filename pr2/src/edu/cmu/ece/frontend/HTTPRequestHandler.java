@@ -161,7 +161,7 @@ public class HTTPRequestHandler {
 					+ request.getFullHeader();
 			UDPPacket backendRequest = new UDPPacket(clientID, remote.getIP(),
 					remote.getPort(), requestString.getBytes(),
-					UDPPacketType.REQUEST, 1);
+					UDPPacketType.REQUEST, 0);
 			udp.sendPacket(backendRequest.getPacket());
 		} catch (UnknownHostException e) {
 			System.err.println("Invalid host provided in routing table.");

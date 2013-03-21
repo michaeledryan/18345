@@ -127,6 +127,7 @@ public class HTTPClientHandler implements Runnable {
 		received.add(seqNum);
 
 		sendQueueToClient();
+		return;
 	}
 
 	/**
