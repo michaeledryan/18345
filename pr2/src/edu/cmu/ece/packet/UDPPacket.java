@@ -1,6 +1,5 @@
 package edu.cmu.ece.packet;
 
-import java.lang.reflect.Array;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -14,8 +13,9 @@ public class UDPPacket implements Comparable<UDPPacket> {
 	private int remotePort;
 
 	// Custom packet header
-	public final int HEADER_SIZE = 3;
+	public final int HEADER_SIZE = 4;
 	private int clientID;
+	private int requestID;
 
 	private int sequenceNumber;
 	private UDPPacketType type;
@@ -36,15 +36,16 @@ public class UDPPacket implements Comparable<UDPPacket> {
 
 		// Parse out custom packet header from data
 		clientID = ByteBuffer.wrap(Arrays.copyOfRange(body, 0, 4)).getInt();
-		sequenceNumber = ByteBuffer.wrap(Arrays.copyOfRange(body, 4, 8))
+		requestID = ByteBuffer.wrap(Arrays.copyOfRange(body, 4, 8)).getInt();
+		sequenceNumber = ByteBuffer.wrap(Arrays.copyOfRange(body, 8, 12))
 				.getInt();
 		type = UDPPacketType.fromInt(ByteBuffer.wrap(
-				Arrays.copyOfRange(body, 8, 12)).getInt());
+				Arrays.copyOfRange(body, 12, 16)).getInt());
 	}
 
 	// Constructor to create new packet to send
-	public UDPPacket(int client, String destinationIP, int destinationPort,
-			byte[] data, UDPPacketType type, int seqNum)
+	public UDPPacket(int client, int request, String destinationIP,
+			int destinationPort, byte[] data, UDPPacketType type, int seqNum)
 			throws UnknownHostException {
 		// Create the UDP header
 		remoteIP = InetAddress.getByName(destinationIP);
@@ -52,29 +53,25 @@ public class UDPPacket implements Comparable<UDPPacket> {
 
 		// Set other data
 		clientID = client;
+		requestID = request;
 		sequenceNumber = seqNum;
 
 		/*
 		 * Create full packet body Header consists of the clientID sending the
 		 * packet, the sequence of that packet. Then is the actual data to send
 		 */
-
 		body = new byte[data.length + HEADER_SIZE * Integer.SIZE / 8];
 
-		/*
-		 * TODO: Make this set integers... seems to be giving us bogus headers.
-		 */
-
-		// This still works for 1-byte numbers....
-
 		byte[] clientArray = ByteBuffer.allocate(4).putInt(client).array();
+		byte[] requestArray = ByteBuffer.allocate(4).putInt(request).array();
 		byte[] seqArray = ByteBuffer.allocate(4).putInt(sequenceNumber).array();
 		byte[] typeArray = ByteBuffer.allocate(4).putInt(type.getValue())
 				.array();
 
 		System.arraycopy(clientArray, 0, body, 0, 4);
-		System.arraycopy(seqArray, 0, body, 4, 4);
-		System.arraycopy(typeArray, 0, body, 8, 4);
+		System.arraycopy(requestArray, 0, body, 4, 4);
+		System.arraycopy(seqArray, 0, body, 8, 4);
+		System.arraycopy(typeArray, 0, body, 12, 4);
 
 		System.arraycopy(data, 0, body, HEADER_SIZE * Integer.SIZE / 8,
 				data.length);
@@ -98,6 +95,10 @@ public class UDPPacket implements Comparable<UDPPacket> {
 
 	public int getClientID() {
 		return clientID;
+	}
+
+	public int getRequestID() {
+		return requestID;
 	}
 
 	public UDPPacketType getType() {

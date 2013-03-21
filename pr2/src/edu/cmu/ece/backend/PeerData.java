@@ -4,17 +4,19 @@ public class PeerData {
 
 	private String ip;
 	private int port;
-	private int rate;
+	private int client;
+	private int request;
 	
-	public PeerData(String ip, int port, int rate) {
+	public PeerData(String ip, int port, int client, int request) {
 		this.ip = ip;
 		this.port = port;
-		this.rate = rate;
+		this.client = client;
+		this.request = request;
 	}
 	
 	
 	public int getRate() {
-		return rate;
+		return client;
 	}
 	
 	public int getPort() {
@@ -32,12 +34,13 @@ public class PeerData {
 		}
 		else {
 			PeerData pd = (PeerData) obj;
-			return pd.port == port && pd.ip.equals(ip) && rate == rate;
+			return pd.port == port && pd.ip.equals(ip) && pd.client == client
+					&& pd.request == request;
 		}
 	}
 	
 	@Override
 	public int hashCode(){
-		return ip.hashCode() + port * rate;
+		return ip.hashCode() + port * client + request;
 	}
 }

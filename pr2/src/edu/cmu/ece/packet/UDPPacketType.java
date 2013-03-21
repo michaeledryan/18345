@@ -11,9 +11,10 @@ package edu.cmu.ece.packet;
  * 		END:     the final data message, no further in the sequence will come
  * 		CONFIG:  a message to a server to modify its internal configuration
  * 		ACK/NAK: positive/negative acknowledgments of a UDP packet received
+ * 		KILL:    signal a client that hung up, kills his requests
  */
 public enum UDPPacketType {
-	NONE(0), REQUEST(1), DATA(2), CONFIG(3), END (4), ACK(5), NAK(6);
+	NONE(0), REQUEST(1), DATA(2), CONFIG(3), END(4), ACK(5), NAK(6), KILL(7);
 	
 	private final int value;
   
@@ -35,6 +36,8 @@ public enum UDPPacketType {
 			return UDPPacketType.ACK;
 		case 6:
 			return UDPPacketType.NAK;
+		case 7:
+			return UDPPacketType.KILL;
 		default:
 			return UDPPacketType.NONE;
 		}

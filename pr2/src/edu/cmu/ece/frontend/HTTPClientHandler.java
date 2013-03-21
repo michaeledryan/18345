@@ -123,6 +123,26 @@ public class HTTPClientHandler implements Runnable {
 	 *            the packet to be added/
 	 */
 	public void addToQueue(UDPPacket packet) {
+		if (client.isClosed()) {
+			System.out.println("\tClient is dead, dismiss incoming");
+			packetQueue.clear();
+
+			// Send kill message to sender
+			try {
+				UDPManager.getInstance().sendPacket(
+						new UDPPacket(packet.getClientID(), packet
+								.getRequestID(), packet.getRemoteIP(), packet
+								.getRemotePort(),
+								new byte[0], UDPPacketType.KILL, packet
+										.getSequenceNumber()).getPacket());
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
+			}
+
+			return;
+		}
+
+		System.out.println("\tWaiting on " + nextSeqNumToSend);
 		int seqNum = packet.getSequenceNumber();
 		if (received.contains(seqNum))
 			return;
@@ -132,10 +152,10 @@ public class HTTPClientHandler implements Runnable {
 		if (seqNum > nextSeqNumToSend) {
 			try {
 				UDPManager.getInstance().sendPacket(
-						new UDPPacket(id, packet.getRemoteIP(), packet
-								.getRemotePort(), new byte[0],
-								UDPPacketType.NAK, nextSeqNumToSend)
-								.getPacket());
+						new UDPPacket(id, packet.getRequestID(), packet
+								.getRemoteIP(), packet.getRemotePort(),
+								new byte[0], UDPPacketType.NAK,
+								nextSeqNumToSend).getPacket());
 			} catch (UnknownHostException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -154,27 +174,6 @@ public class HTTPClientHandler implements Runnable {
 	 */
 	private void sendQueueToClient() {
 		sending = true;
-		System.out.println("Start " + packetQueue.size());
-		if (packetQueue.isEmpty()
-				|| packetQueue.peek().getSequenceNumber() > nextSeqNumToSend) {
-			System.out.print(packetQueue.peek().getSequenceNumber() + " and "
-					+ nextSeqNumToSend);
-			sending = false;
-			UDPPacket temp;
-		/*	if ((temp = packetQueue.peek()) != null) {
-				try {
-					UDPManager.getInstance().sendPacket(
-							new UDPPacket(id, temp.getRemoteIP(), temp
-									.getRemotePort(), new byte[0],
-									UDPPacketType.NAK, nextSeqNumToSend)
-									.getPacket());
-				} catch (UnknownHostException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}*/
-			return;
-		}
 
 		while (!packetQueue.isEmpty()
 				&& packetQueue.peek().getSequenceNumber() == nextSeqNumToSend) {
@@ -193,11 +192,16 @@ public class HTTPClientHandler implements Runnable {
 				out.write(packetData, 0, packetData.length);
 				out.flush();
 			} catch (IOException e) {
-				System.err.println("Could not mirror packet to client.");
+				System.err.println("Could not mirror packet to client: " + e);
+				if (client.isClosed()) {
+					System.out.println("\tClient is dead.");
+					packetQueue.clear();
+					break;
+				}
 			}
 
 		}
+		
 		sending = false;
-		System.out.println("Return " + packetQueue.size());
 	}
 }

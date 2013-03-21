@@ -89,7 +89,9 @@ public class HTTPRequestHandler {
 			this.handleLocalRequest(target);
 			return;
 		} else {
-			System.out.println("HTTP Request\n\t404 Not Found");
+			System.out.println("HTTP Request, client " + clientID
+					+ "\n\t404 Not Found: "
+					+ request.getRequest());
 			HTTPResponses.send404(request, textOut);
 			return;
 		}
@@ -113,15 +115,15 @@ public class HTTPRequestHandler {
 			else if (keyValue[0].equals("rate"))
 				rate = keyValue[1];
 		}
-		System.out.println("HTTP Request");
+		System.out.println("HTTP Request, client " + clientID);
 		System.out.println("\tConfig request with parameters:");
 		System.out.println("\t\tFile: " + path);
 		System.out.println("\t\tPath: " + host + ":" + port);
 		System.out.println("\t\tBitrate: " + rate);
 
 		
-		PeerData peerdata = new PeerData(host, Integer.parseInt(port), Integer
-				.parseInt(rate));
+		PeerData peerdata = new PeerData(host, Integer.parseInt(port),
+				Integer.parseInt(rate), 0);
 		router.addtofileNames(path, peerdata);
 		
 		HTTPResponses.sendPeerConfigMessage(path, request, textOut);
@@ -131,7 +133,7 @@ public class HTTPRequestHandler {
 	}
 
 	private void handlePeerConfig(String parameters) {
-		System.out.println("HTTP Request");
+		System.out.println("HTTP Request, client " + clientID);
 		System.out.println("\tConfig request with parameters:");
 		System.out.println("\t\t" + parameters);
 		
@@ -147,8 +149,11 @@ public class HTTPRequestHandler {
 		/*
 		 * Look up file in the routing table. If it isn't found, send a 404
 		 */
-		System.out.println("HTTP Request");
+		request.parseRanges(new File(target));
+		System.out.println("HTTP Request, client " + clientID);
 		System.out.println("\tRemote request for: " + target);
+		System.out.println("\tAsking for range: "
+				+ request.getFullRangeString());
 		PeerData remote = router.getPeerData(target);
 		if (remote == null) {
 			HTTPResponses.send404(request, textOut);
@@ -159,7 +164,8 @@ public class HTTPRequestHandler {
 		try {
 			String requestString = "GET " + target + " HTTP/1.1\r\n"
 					+ request.getFullHeader();
-			UDPPacket backendRequest = new UDPPacket(clientID, remote.getIP(),
+			UDPPacket backendRequest = new UDPPacket(clientID, 0,
+					remote.getIP(),
 					remote.getPort(), requestString.getBytes(),
 					UDPPacketType.REQUEST, 0);
 			udp.sendPacket(backendRequest.getPacket());
@@ -176,8 +182,10 @@ public class HTTPRequestHandler {
 
 	private void handleLocalRequest(File target) {
 		// Generate and write headers to client.
-		System.out.println("HTTP Request");
+		System.out.println("HTTP Request, client " + clientID);
 		System.out.println("\tLocal request for: " + target);
+		System.out.println("\tAsking for range: "
+				+ request.getFullRangeString());
 		String header = HTTPResponseHeader.makeHeader(target, request);
 		textOut.write(header);
 		textOut.flush();

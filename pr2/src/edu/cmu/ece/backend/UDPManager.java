@@ -6,7 +6,7 @@ import java.net.DatagramSocket;
 import java.net.SocketTimeoutException;
 
 public class UDPManager implements Runnable {
-	private static int packetLength = 1 << 17;
+	private static int packetLength = 1 << 16;
 	private static int portNum;
 	private DatagramSocket socket;
 	private static UDPManager instance = null;

@@ -21,12 +21,14 @@ public class UDPRequestHandler {
 	private UDPPacket backendRequest;
 	private HTTPRequestPacket frontendRequest;
 	
+	private int id;
 	private String header;
 	private ResponseFileData fileData;
 	private int numPackets;
 	private boolean alive = true;
 
 	private static int dataLength = 65000;
+	private static int requests = 0;
 
 
 	/**
@@ -37,6 +39,7 @@ public class UDPRequestHandler {
 	 * @param textoutput
 	 */
 	public UDPRequestHandler(UDPPacket incoming) {
+		id = ++requests;
 		// Ugly quadruple conversion... easier way?
 		backendRequest = incoming;
 		header = new String(incoming.getData());
@@ -103,7 +106,7 @@ public class UDPRequestHandler {
 		UDPPacket packet = null;
 		if (seqNum == 0) {
 			try {
-				packet = new UDPPacket(backendRequest.getClientID(),
+				packet = new UDPPacket(backendRequest.getClientID(), id,
 						backendRequest.getRemoteIP(),
 						backendRequest.getRemotePort(), header.getBytes(),
 						UDPPacketType.END, 0);
@@ -121,7 +124,7 @@ public class UDPRequestHandler {
 
 		// Create a packet from this output stream
 		try {
-			packet = new UDPPacket(backendRequest.getClientID(),
+			packet = new UDPPacket(backendRequest.getClientID(), id,
 					backendRequest.getRemoteIP(),
 					backendRequest.getRemotePort(), out.toByteArray(), type,
 					seqNum);
@@ -132,10 +135,17 @@ public class UDPRequestHandler {
 	}
 	
 	public void kill() {
+		System.out.println("\tWe have slain client "
+				+ backendRequest.getClientID() + " request " + id);
 		alive = false;
+		UDPSender.getInstance().clearRequester(this);
 	}
 	
 	public boolean isAlive() {
 		return alive;
+	}
+
+	public int getID() {
+		return id;
 	}
 }

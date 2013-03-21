@@ -20,10 +20,11 @@ public class UDPPacketHandler implements Runnable {
 	@Override
 	public void run() {
 		// Get peer data to look up in routing table
-		System.out.println("UDP packet received from clientID"
-				+ packet.getClientID());
+		System.out.println("UDP packet with client " + packet.getClientID()
+				+ " and request " + packet.getRequestID());
 		PeerData pd = new PeerData(packet.getRemoteIP(),
-				packet.getRemotePort(), packet.getClientID());
+				packet.getRemotePort(), packet.getClientID(),
+				packet.getRequestID());
 
 		switch (packet.getType()) {
 		case REQUEST:
@@ -50,12 +51,23 @@ public class UDPPacketHandler implements Runnable {
 			return;
 			// We got the packet, so let's send another. We still have to
 			// implement timeouts.
+
 		case NAK:
-			System.out.println("NAK for seqNum " + packet.getSequenceNumber());
-			sender.requestResend(new UDPPacketSender(router.getRequest(pd), packet.getSequenceNumber(),
-					10, 5));
+			System.out
+					.println("\tNAK for seqNum " + packet.getSequenceNumber());
+			UDPRequestHandler request = router.getRequest(pd);
+			sender.nackPacket(request, packet.getSequenceNumber());
 			return;
 			// Currently there is no support for NAKs
+
+		case KILL:
+			System.out.println("\tGot kill request from client "
+					+ packet.getClientID());
+			if (router.getRequest(pd) != null) {
+				router.getRequest(pd).kill();
+			}
+			return;
+			// Kill a request if the client hung up
 
 		case END:
 		case DATA:
@@ -77,9 +89,9 @@ public class UDPPacketHandler implements Runnable {
 			// Ack this packet
 			try {
 				udp.sendPacket(new UDPPacket(client.getClientID(), packet
-						.getRemoteIP(), packet.getRemotePort(), new byte[0],
-						UDPPacketType.ACK, packet.getSequenceNumber())
-						.getPacket());
+						.getRequestID(), packet.getRemoteIP(), packet
+						.getRemotePort(), new byte[0], UDPPacketType.ACK,
+						packet.getSequenceNumber()).getPacket());
 			} catch (UnknownHostException e) {
 				e.printStackTrace();
 			}

@@ -3,7 +3,8 @@ package edu.cmu.ece.backend;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class UDPPacketSender extends TimerTask {
+public class UDPPacketSender extends TimerTask implements
+		Comparable<UDPPacketSender> {
 	private UDPSender sender = UDPSender.getInstance();
 	private UDPRequestHandler requester;
 	private int seqNum;
@@ -22,6 +23,8 @@ public class UDPPacketSender extends TimerTask {
 		if (requester.isAlive()) {
 			udp.sendPacket(requester.getPacket(seqNum).getPacket());
 			new Timer().schedule(this, timeout);
+		} else {
+			System.out.println("MY PARENT IS DEAD :(");
 		}
 	}
 
@@ -29,6 +32,8 @@ public class UDPPacketSender extends TimerTask {
 	public void run() {
 		if (requester.isAlive() && ttl != 0) {
 			sender.requestResend(this);
+		} else {
+			System.out.println("MY PARENT IS DEAD :(");
 		}
 	}
 
@@ -42,5 +47,10 @@ public class UDPPacketSender extends TimerTask {
 	
 	public int getTTL() {
 		return ttl;
+	}
+
+	@Override
+	public int compareTo(UDPPacketSender o) {
+		return seqNum - o.seqNum;
 	}
 }
