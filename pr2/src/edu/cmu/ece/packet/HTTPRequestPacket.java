@@ -63,6 +63,7 @@ public class HTTPRequestPacket {
 
 	/* get the range query vales */
 	public void parseRanges(File target) {
+		fullRangeString = "";
 		if (this.getHeader("Range") == null) {
 			lowerRanges = new int[1];
 			upperRanges = new int[1];

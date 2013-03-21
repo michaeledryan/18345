@@ -24,7 +24,7 @@ public class ResponseFileData {
 		uppers = request.getUpperRanges();
 	}
 
-	/*
+	/**
 	 * Given a maximum packet size, returns the number of packets it would take
 	 * to send this file
 	 */
@@ -37,7 +37,7 @@ public class ResponseFileData {
 		return result;
 	}
 
-	/*
+	/**
 	 * Given an output stream, a packet number and a packet size, gets the
 	 * packetNum-th packet that is at most packetSize big, and writes that to
 	 * the specified output stream.
@@ -83,7 +83,7 @@ public class ResponseFileData {
 		} catch (IndexOutOfBoundsException e) {
 			System.err.println("Failed to copy to buffer: " + e.getMessage());
 		} catch (SocketException e) {
-			System.err.println("Failed to write to socket: " + e.getMessage());
+		//	System.err.println("Failed to write to socket: " + e.getMessage());
 		} catch (IOException e) {
 			System.err.println("Could not read/write file: " + e.getMessage());
 		}
@@ -97,7 +97,7 @@ public class ResponseFileData {
 		}
 	}
 
-	/*
+	/**
 	 * Given an OutputStream for a socket, writes the entire file to that socket
 	 * using a maximum buffer size.
 	 */

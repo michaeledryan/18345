@@ -20,7 +20,8 @@ public class UDPPacketHandler implements Runnable {
 	@Override
 	public void run() {
 		// Get peer data to look up in routing table
-		System.out.println("UDP packet received from clientID" + packet.getClientID());
+		System.out.println("UDP packet received from clientID"
+				+ packet.getClientID());
 		PeerData pd = new PeerData(packet.getRemoteIP(),
 				packet.getRemotePort(), packet.getClientID());
 
@@ -50,6 +51,9 @@ public class UDPPacketHandler implements Runnable {
 			// We got the packet, so let's send another. We still have to
 			// implement timeouts.
 		case NAK:
+			System.out.println("NAK for seqNum " + packet.getSequenceNumber());
+			sender.requestResend(new UDPPacketSender(router.getRequest(pd), packet.getSequenceNumber(),
+					10, 5));
 			return;
 			// Currently there is no support for NAKs
 
@@ -69,7 +73,6 @@ public class UDPPacketHandler implements Runnable {
 
 			// Add to the HTTPClientHandler's queue.
 			client.addToQueue(packet);
-
 
 			// Ack this packet
 			try {

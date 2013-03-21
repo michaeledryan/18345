@@ -6,13 +6,16 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.PriorityBlockingQueue;
 
 import edu.cmu.ece.DCException;
 import edu.cmu.ece.backend.RoutingTable;
+import edu.cmu.ece.backend.UDPManager;
 import edu.cmu.ece.packet.HTTPRequestPacket;
 import edu.cmu.ece.packet.UDPPacket;
+import edu.cmu.ece.packet.UDPPacketType;
 
 /**
  * Manages a connection to a given client.
@@ -25,6 +28,7 @@ public class HTTPClientHandler implements Runnable {
 	private static int clientCount = 0;
 	private int id;
 	private boolean listening = true;
+	private boolean sending = false;
 
 	private PriorityBlockingQueue<UDPPacket> packetQueue = new PriorityBlockingQueue<UDPPacket>();
 	private ConcurrentSkipListSet<Integer> received = new ConcurrentSkipListSet<Integer>();
@@ -125,8 +129,22 @@ public class HTTPClientHandler implements Runnable {
 
 		packetQueue.add(packet);
 		received.add(seqNum);
+		if (seqNum > nextSeqNumToSend) {
+			try {
+				UDPManager.getInstance().sendPacket(
+						new UDPPacket(id, packet.getRemoteIP(), packet
+								.getRemotePort(), new byte[0],
+								UDPPacketType.NAK, nextSeqNumToSend)
+								.getPacket());
+			} catch (UnknownHostException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 
-		sendQueueToClient();
+		if (!sending) {
+			sendQueueToClient();
+		}
 		return;
 	}
 
@@ -135,9 +153,28 @@ public class HTTPClientHandler implements Runnable {
 	 * order, then send everything we can.
 	 */
 	private void sendQueueToClient() {
+		sending = true;
+		System.out.println("Start " + packetQueue.size());
 		if (packetQueue.isEmpty()
-				|| packetQueue.peek().getSequenceNumber() > nextSeqNumToSend)
+				|| packetQueue.peek().getSequenceNumber() > nextSeqNumToSend) {
+			System.out.print(packetQueue.peek().getSequenceNumber() + " and "
+					+ nextSeqNumToSend);
+			sending = false;
+			UDPPacket temp;
+		/*	if ((temp = packetQueue.peek()) != null) {
+				try {
+					UDPManager.getInstance().sendPacket(
+							new UDPPacket(id, temp.getRemoteIP(), temp
+									.getRemotePort(), new byte[0],
+									UDPPacketType.NAK, nextSeqNumToSend)
+									.getPacket());
+				} catch (UnknownHostException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}*/
 			return;
+		}
 
 		while (!packetQueue.isEmpty()
 				&& packetQueue.peek().getSequenceNumber() == nextSeqNumToSend) {
@@ -149,6 +186,8 @@ public class HTTPClientHandler implements Runnable {
 				return;
 			}
 
+			nextSeqNumToSend++;
+
 			byte[] packetData = packet.getData();
 			try {
 				out.write(packetData, 0, packetData.length);
@@ -157,8 +196,8 @@ public class HTTPClientHandler implements Runnable {
 				System.err.println("Could not mirror packet to client.");
 			}
 
-			nextSeqNumToSend++;
 		}
+		sending = false;
+		System.out.println("Return " + packetQueue.size());
 	}
-
 }

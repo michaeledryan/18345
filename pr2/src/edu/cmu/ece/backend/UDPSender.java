@@ -8,10 +8,11 @@ public class UDPSender implements Runnable {
 	private static UDPSender instance = null;
 	private UDPManager udp = UDPManager.getInstance();
 
-	private static long timeout = 1000; // ms
+	private static long timeout = 10; // ms
 
 	ConcurrentHashMap<UDPRequestHandler, ConcurrentSkipListSet<Integer>> received;
 	ConcurrentLinkedQueue<UDPPacketSender> queue;
+	ConcurrentLinkedQueue<UDPPacketSender> resendQueue;
 
 	public static UDPSender getInstance() {
 		if (instance == null) {
@@ -23,6 +24,7 @@ public class UDPSender implements Runnable {
 	private UDPSender() {
 		received = new ConcurrentHashMap<UDPRequestHandler, ConcurrentSkipListSet<Integer>>();
 		queue = new ConcurrentLinkedQueue<UDPPacketSender>();
+		resendQueue = new ConcurrentLinkedQueue<UDPPacketSender>();
 	}
 
 	/*
@@ -38,10 +40,18 @@ public class UDPSender implements Runnable {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			if (!queue.isEmpty()) {
-				while (!queue.isEmpty()) {
-					UDPPacketSender sender = queue.remove();
-					sender.send(udp);
+			UDPPacketSender sender;
+			if (!resendQueue.isEmpty() || !queue.isEmpty()) {
+				while (!resendQueue.isEmpty() || !queue.isEmpty()) {
+					if (!resendQueue.isEmpty()) {
+						sender = resendQueue.remove();
+						sender.send(udp);
+					}
+
+					else if (!queue.isEmpty()){
+						sender = queue.remove();
+						sender.send(udp);
+					}
 				}
 			}
 		}
@@ -52,7 +62,7 @@ public class UDPSender implements Runnable {
 	 */
 	public void requestToSend(UDPRequestHandler request, int numPackets) {
 		for (int i = 0; i < numPackets; i++) {
-			UDPPacketSender sender = new UDPPacketSender(request, i, timeout);
+			UDPPacketSender sender = new UDPPacketSender(request, i, timeout, 5);
 			queue.add(sender);
 			received.put(request, new ConcurrentSkipListSet<Integer>());
 		}
@@ -68,11 +78,12 @@ public class UDPSender implements Runnable {
 
 		ConcurrentSkipListSet<Integer> acked = received.get(requester);
 		if (!acked.contains(seqNum)) {
+			System.err.print(" " + seqNum + ";");
 			// System.out.println(acked.toString());
 			// Recreate requester so we can reschedule it... TimerTask is dumb
 			UDPPacketSender newRequest = new UDPPacketSender(requester, seqNum,
-					timeout);
-			queue.add(newRequest);
+					timeout, request.getTTL() - 1);
+			resendQueue.add(newRequest);
 		}
 	}
 
