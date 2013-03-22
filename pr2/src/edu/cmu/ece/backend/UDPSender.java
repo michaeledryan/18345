@@ -50,7 +50,7 @@ public class UDPSender implements Runnable {
 
 						sender = resendQueue.remove();
 						UDPRequestHandler requester = sender.getRequester();
-						if (requester.canISend(0)) {
+						if (requester.canISend(65000)) {
 
 							sender.send(udp);
 							// Remove from nacked - we finally responded
@@ -65,7 +65,7 @@ public class UDPSender implements Runnable {
 					else if (!queue.isEmpty()) {
 						sender = queue.remove();
 						UDPRequestHandler requester = sender.getRequester();
-						if (requester.canISend(0)) {
+						if (requester.canISend(65000)) {
 
 							sender.send(udp);
 

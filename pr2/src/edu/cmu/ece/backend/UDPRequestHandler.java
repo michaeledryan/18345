@@ -31,6 +31,7 @@ public class UDPRequestHandler {
 	private float byteRate;
 	private long timeLastSent = 0;
 	private int bytesSent = 0;
+	//private boolean couldNotSend = false;
 
 	private static int dataLength = 65000;
 	private static int requests = 0;
@@ -52,12 +53,13 @@ public class UDPRequestHandler {
 		}
 		
 		long now = System.currentTimeMillis();
-		if (bytesSent + numBytes >= (now - timeLastSent) * byteRate / 1000) {
-			System.err.println("CANNOT SEND: RATE IS " + byteRate);
+		if ((bytesSent + numBytes) >= ((now - timeLastSent) * byteRate / 2000)) {
+			System.err.println("CANNOT SEND: already sent" + (now - timeLastSent) * byteRate / 1000);
+		//	couldNotSend = true;
 			return false;
 		} else {
 			bytesSent += numBytes;
-			timeLastSent = System.currentTimeMillis();
+			//timeLastSent = System.currentTimeMillis();
 			System.out.println("CAN SEND");
 			return true;
 		}
