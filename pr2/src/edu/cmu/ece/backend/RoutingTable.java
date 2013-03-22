@@ -12,7 +12,7 @@ public class RoutingTable {
 	private Map<String, ConcurrentSkipListSet<PeerData>> fileNamesToPeerData = new ConcurrentHashMap<String, ConcurrentSkipListSet<PeerData>>();
 	private Map<Integer, HTTPClientHandler> idsToClientHandlers = new ConcurrentHashMap<Integer, HTTPClientHandler>();
 	private Map<PeerData, UDPRequestHandler> peersToRequests = new ConcurrentHashMap<PeerData, UDPRequestHandler>();
-	private Map<Integer, Integer> clientsToBitRates = new ConcurrentHashMap<Integer, Integer>();
+	private Map<String, Integer> clientsToBitRates = new ConcurrentHashMap<String, Integer>();
 
 	/**
 	 * Returns the instance of RoutingTable.
@@ -149,15 +149,19 @@ public class RoutingTable {
 	/**
 	 * Gets the current bit rate in bits/second for a given client.
 	 */
-	public int getClientBitRate(int clientID) {
-		return clientsToBitRates.get(new Integer(clientID));
+	public int getClientBitRate(String clientIP) {
+		return clientsToBitRates.get(clientIP);
 	}
 
 	/**
 	 * Sets the bitRate.
 	 */
-	public void setBitRate(int clientID, int rate) {
-		clientsToBitRates.put(new Integer(clientID), rate);
+	public void setBitRate(String clientIP, int rate) {
+		clientsToBitRates.put(clientIP, rate);
+	}
+
+	public boolean bitRateSet(String clientIP) {
+		return clientsToBitRates.containsKey(clientIP);
 	}
 
 	/**

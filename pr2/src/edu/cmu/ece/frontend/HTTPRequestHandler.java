@@ -33,6 +33,7 @@ public class HTTPRequestHandler {
 	private HTTPClientHandler handler;
 
 	private int clientID;
+	private String clientIP;
 
 	/**
 	 * Constructor. Sets necessary fields.
@@ -42,10 +43,11 @@ public class HTTPRequestHandler {
 	 * @param output
 	 * @param textoutput
 	 */
-	public HTTPRequestHandler(int id, HTTPRequestPacket request,
+	public HTTPRequestHandler(int id, String ip, HTTPRequestPacket request,
 			OutputStream output, PrintWriter textoutput,
 			HTTPClientHandler handler) {
 		this.clientID = id;
+		this.clientIP = ip;
 		this.request = request;
 		this.out = output;
 		this.textOut = textoutput;
@@ -142,7 +144,7 @@ public class HTTPRequestHandler {
 
 		int rate = Integer.parseInt(parameters.split("=")[1]);
 
-		router.setBitRate(clientID, rate);
+		router.setBitRate(clientIP, rate);
 		// TODO: figure out how to implement bitrate stuff
 
 		HTTPResponses.sendBitRateConfigMessage(rate, request, textOut);
@@ -157,6 +159,8 @@ public class HTTPRequestHandler {
 		System.out.println("\tRemote request for: " + target);
 		System.out.println("\tAsking for range: "
 				+ request.getFullRangeString());
+		System.out.println("\tRequesting bitrate: "
+				+ router.getClientBitRate(clientIP));
 		ConcurrentSkipListSet<PeerData> peers = router.getPeerData(target);
 		if (peers == null || peers.size() == 0) {
 			HTTPResponses.send404(request, textOut);
@@ -170,7 +174,7 @@ public class HTTPRequestHandler {
 		// Add bitrate
 		System.arraycopy(
 				ByteBuffer.allocate(4)
-						.putInt(router.getClientBitRate(clientID)).array(), 0,
+						.putInt(router.getClientBitRate(clientIP)).array(), 0,
 				packetData, 0, 4);
 		// Add data
 		System.arraycopy(requestStringBytes, 0, packetData, 12,

@@ -75,6 +75,8 @@ public class UDPRequestHandler {
 		id = ++requests;
 		backendRequest = incoming;
 
+		System.out.println("\tAssigned request id " + id);
+
 		// Parse request data out
 		byte[] requestData = incoming.getData();
 
@@ -116,6 +118,8 @@ public class UDPRequestHandler {
 			System.err
 					.println("Couldn't convert UDP packet request to HTTP header.");
 		}
+
+		System.out.println("\tRequested file: " + frontendRequest.getRequest());
 	}
 
 	/**
