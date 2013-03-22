@@ -42,6 +42,9 @@ public class UDPRequestHandler {
 	 * @return
 	 */
 	public boolean canISend(int numBytes) {
+		if (byteRate == 0) {
+			return true;
+		}
 		numBytes = dataLength;
 		if (timeLastSent == 0) {
 			timeLastSent = System.currentTimeMillis();
@@ -75,9 +78,6 @@ public class UDPRequestHandler {
 		int bytesRateInt = ByteBuffer.wrap(
 				Arrays.copyOfRange(requestData, 0, 4)).getInt(); // Actually a
 																	// Byte Rate
-		if (bytesRateInt == 0) {
-			bytesRateInt = Integer.MAX_VALUE;
-		}
 		byteRate = (float) bytesRateInt;
 		header = new String(Arrays.copyOfRange(requestData, 4,
 				requestData.length));

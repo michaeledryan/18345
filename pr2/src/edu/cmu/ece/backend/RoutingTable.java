@@ -36,9 +36,9 @@ public class RoutingTable {
 	 */
 	public UDPRequestHandler addToRequests(PeerData pd,
 			UDPRequestHandler handler) {
-		synchronized (peersToRequests) {
-			return peersToRequests.put(pd, handler);
-		}
+		System.out.println(pd.getRequest());
+		return peersToRequests.put(pd, handler);
+
 	}
 
 	/**
@@ -150,13 +150,12 @@ public class RoutingTable {
 	public void setBitRate(int clientID, int rate) {
 		clientsToBitRates.put(new Integer(clientID), rate);
 	}
-	
+
 	/**
 	 * Removes the bitRate.
 	 */
 	public void removeBitRate(int clientID) {
 		clientsToBitRates.remove(new Integer(clientID));
 	}
-	
 
 }

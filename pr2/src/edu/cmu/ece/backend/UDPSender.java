@@ -67,9 +67,7 @@ public class UDPSender implements Runnable {
 						if (requester.canISend(0)) {
 
 							sender.send(udp);
-							// Remove from nacked - we finally responded
-							nacked.get(sender.getRequester()).remove(
-									sender.getSeqNum());
+
 						} else {
 							queue.add(sender);
 						}
