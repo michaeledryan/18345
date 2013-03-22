@@ -1,6 +1,5 @@
 package edu.cmu.ece.backend;
 
-import java.net.DatagramPacket;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -66,9 +65,7 @@ public class UDPSender implements Runnable {
 						sender = queue.remove();
 						UDPRequestHandler requester = sender.getRequester();
 						if (requester.canISend(0)) {
-
 							sender.send(udp);
-
 						} else {
 							queue.add(sender);
 						}
@@ -88,7 +85,8 @@ public class UDPSender implements Runnable {
 		nacked.put(request, new ConcurrentSkipListSet<Integer>());
 
 		// Queue up packet requests
-		for (int i = 0; i < numPackets; i++) {
+		for (int i = request.getPhase(); i < numPackets; i += request
+				.getPeriod()) {
 			UDPPacketSender sender = new UDPPacketSender(request, i, timeout, 5);
 			queue.add(sender);
 		}

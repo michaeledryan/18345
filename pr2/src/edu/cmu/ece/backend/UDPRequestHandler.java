@@ -27,6 +27,8 @@ public class UDPRequestHandler {
 	private String header;
 	private ResponseFileData fileData;
 	private int numPackets;
+	private int period;
+	private int phase;
 	private boolean alive = true;
 	private float byteRate;
 	private long timeLastSent = 0;
@@ -71,14 +73,27 @@ public class UDPRequestHandler {
 	 * @param textoutput
 	 */
 	public UDPRequestHandler(UDPPacket incoming) {
+		// Create request
 		id = ++requests;
-		// Ugly quadruple conversion... easier way?
 		backendRequest = incoming;
+
+		// Parse request data out
 		byte[] requestData = incoming.getData();
+
+		// Get byterate
 		int bytesRateInt = ByteBuffer.wrap(
-				Arrays.copyOfRange(requestData, 0, 4)).getInt(); // Actually a
-																	// Byte Rate
+				Arrays.copyOfRange(requestData, 0, 4)).getInt();
 		byteRate = (float) bytesRateInt;
+
+		// Get period
+		period = ByteBuffer.wrap(Arrays.copyOfRange(requestData, 4, 8))
+				.getInt();
+
+		// Get phase
+		phase = ByteBuffer.wrap(Arrays.copyOfRange(requestData, 8, 12))
+				.getInt();
+
+		// Get HTTP header
 		header = new String(Arrays.copyOfRange(requestData, 4,
 				requestData.length));
 		BufferedReader packetReader = new BufferedReader(new CharArrayReader(
@@ -187,5 +202,13 @@ public class UDPRequestHandler {
 
 	public int getID() {
 		return id;
+	}
+
+	public int getPeriod() {
+		return period;
+	}
+
+	public int getPhase() {
+		return phase;
 	}
 }

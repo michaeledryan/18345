@@ -2,13 +2,14 @@ package edu.cmu.ece.backend;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 import edu.cmu.ece.frontend.HTTPClientHandler;
 
 public class RoutingTable {
 
 	private static RoutingTable instance = null;
-	private Map<String, PeerData> fileNamesToPeerData = new ConcurrentHashMap<String, PeerData>();
+	private Map<String, ConcurrentSkipListSet<PeerData>> fileNamesToPeerData = new ConcurrentHashMap<String, ConcurrentSkipListSet<PeerData>>();
 	private Map<Integer, HTTPClientHandler> idsToClientHandlers = new ConcurrentHashMap<Integer, HTTPClientHandler>();
 	private Map<PeerData, UDPRequestHandler> peersToRequests = new ConcurrentHashMap<PeerData, UDPRequestHandler>();
 	private Map<Integer, Integer> clientsToBitRates = new ConcurrentHashMap<Integer, Integer>();
@@ -57,7 +58,16 @@ public class RoutingTable {
 	 */
 	public PeerData addtofileNames(String path, PeerData ip) {
 		synchronized (fileNamesToPeerData) {
-			return fileNamesToPeerData.put(path, ip);
+			ConcurrentSkipListSet<PeerData> peers;
+			if (fileNamesToPeerData.containsKey(path)) {
+				peers = fileNamesToPeerData.get(path);
+			} else {
+				peers = new ConcurrentSkipListSet<PeerData>();
+				fileNamesToPeerData.put(path, peers);
+			}
+			peers.add(ip);
+
+			return ip;
 		}
 	}
 
@@ -107,9 +117,9 @@ public class RoutingTable {
 	/**
 	 * Removes a path from the table. Probably never used.
 	 */
-	public PeerData removeFile(String path) {
+	public void removeFile(String path) {
 		synchronized (fileNamesToPeerData) {
-			return fileNamesToPeerData.remove(path);
+			fileNamesToPeerData.remove(path);
 		}
 	}
 
@@ -123,7 +133,7 @@ public class RoutingTable {
 	/**
 	 * Gets PeerData given file path.
 	 */
-	public PeerData getPeerData(String path) {
+	public ConcurrentSkipListSet<PeerData> getPeerData(String path) {
 		return fileNamesToPeerData.get(path);
 	}
 

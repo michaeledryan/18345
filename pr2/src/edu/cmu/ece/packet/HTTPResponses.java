@@ -4,7 +4,6 @@ import java.io.PrintWriter;
 import java.util.Date;
 
 import edu.cmu.ece.backend.PeerData;
-import edu.cmu.ece.backend.RoutingTable;
 
 public class HTTPResponses {
 	/**
@@ -37,10 +36,9 @@ public class HTTPResponses {
 	}
 
 	public static void sendPeerConfigMessage(String path,
-			HTTPRequestPacket request, PrintWriter out) {
+			HTTPRequestPacket request, PrintWriter out, PeerData peerdata) {
 		String header = "HTTP/1.1 200 OK\r\n";
 		String connection = request.getHeader("Connection");
-		PeerData peerdata = RoutingTable.getInstance().getPeerData(path);
 
 		if (connection != null && connection.equalsIgnoreCase("close"))
 			header += "Connection: Close\r\n";
