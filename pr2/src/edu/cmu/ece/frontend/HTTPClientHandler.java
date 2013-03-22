@@ -124,7 +124,7 @@ public class HTTPClientHandler implements Runnable {
 	 */
 	public void addToQueue(UDPPacket packet) {
 		if (client.isClosed()) {
-			System.out.println("\tClient is dead, dismiss incoming");
+			// System.out.println("\tClient is dead, dismiss incoming");
 			packetQueue.clear();
 
 			// Send kill message to sender
@@ -142,7 +142,7 @@ public class HTTPClientHandler implements Runnable {
 			return;
 		}
 
-		System.out.println("\tWaiting on " + nextSeqNumToSend);
+		// System.out.println("\tWaiting on " + nextSeqNumToSend);
 		int seqNum = packet.getSequenceNumber();
 		if (received.contains(seqNum))
 			return;

@@ -34,10 +34,12 @@ public class UDPSender implements Runnable {
 	@Override
 	public void run() {
 		while (true) {
-			/*
-			 * try { Thread.sleep(50); } catch (InterruptedException e) { //
-			 * TODO Auto-generated catch block e.printStackTrace(); }
-			 */
+			try { 
+				Thread.sleep(50); 
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+		  	}
 
 			UDPPacketSender sender;
 			if (!resendQueue.isEmpty() || !queue.isEmpty()) {
@@ -101,7 +103,13 @@ public class UDPSender implements Runnable {
 	}
 
 	public void nackPacket(UDPRequestHandler requester, int seqNum) {
+		if (requester == null)
+			System.out.println("REQUESTER IS NULL");
+		if (nacked == null)
+			System.out.println("NACKED IS NULL");
 		ConcurrentSkipListSet<Integer> nackedSet = nacked.get(requester);
+		if (nackedSet == null)
+			System.out.println("NACKEDSET IS NULL");
 		if (!nackedSet.contains(seqNum)) {
 			UDPPacketSender newRequest = new UDPPacketSender(requester, seqNum,
 					timeout, 5);

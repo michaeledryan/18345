@@ -56,8 +56,6 @@ public class HTTPResponses {
 				+ peerdata.getIP()
 				+ "</li><li>Peer port: "
 				+ peerdata.getPort()
-				+ "</li><li>Peer bitrate: "
-				+ peerdata.getRate()
 				+ "</li></body></html>";
 
 		// Add the page info

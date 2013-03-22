@@ -35,18 +35,21 @@ public class UDPPacketHandler implements Runnable {
 			UDPRequestHandler handler = new UDPRequestHandler(packet);
 			int numPackets = handler.initializeRequest();
 			sender.requestToSend(handler, numPackets);
-			router.addToRequests(pd, handler);
+			router.addToRequests(
+					new PeerData(packet.getRemoteIP(), packet.getRemotePort(),
+							packet.getClientID(), handler.getID()), handler);
 			return;
 			// Trigger a UDPRequestHandler to find the file and send it out.
 			// Add the send request to our sending manager
 			// MAke the handler visible so that we can get it later for ACKs
 
 		case ACK:
+			System.out.println("\tGot UDP ACK " + packet.getSequenceNumber());
 			if (router.getRequest(pd) != null) {
-				System.out.println("\tGot UDP ACK "
-						+ packet.getSequenceNumber());
 				UDPRequestHandler request = router.getRequest(pd);
 				sender.ackPacket(request, packet.getSequenceNumber());
+			} else {
+				System.out.println("\tRequester is NULL?");
 			}
 			return;
 			// We got the packet, so let's send another. We still have to
@@ -55,8 +58,12 @@ public class UDPPacketHandler implements Runnable {
 		case NAK:
 			System.out
 					.println("\tNAK for seqNum " + packet.getSequenceNumber());
-			UDPRequestHandler request = router.getRequest(pd);
-			sender.nackPacket(request, packet.getSequenceNumber());
+			if (router.getRequest(pd) != null) {
+				UDPRequestHandler request = router.getRequest(pd);
+				sender.nackPacket(request, packet.getSequenceNumber());
+			} else {
+				System.out.println("\tRequester is NULL?");
+			}
 			return;
 			// Currently there is no support for NAKs
 
@@ -65,6 +72,8 @@ public class UDPPacketHandler implements Runnable {
 					+ packet.getClientID());
 			if (router.getRequest(pd) != null) {
 				router.getRequest(pd).kill();
+			} else {
+				System.out.println("\tRequester is NULL?");
 			}
 			return;
 			// Kill a request if the client hung up
