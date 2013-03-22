@@ -14,15 +14,16 @@ public class UDPManager implements Runnable {
 	public static void setPort(int port) {
 		portNum = port;
 	}
-	
+
 	public static UDPManager getInstance() {
 		if (instance == null) {
 			instance = new UDPManager();
 		}
 		return instance;
 	}
-	
-	private UDPManager() {}
+
+	private UDPManager() {
+	}
 
 	@Override
 	public void run() {
@@ -43,7 +44,7 @@ public class UDPManager implements Runnable {
 				packet = new DatagramPacket(new byte[packetLength],
 						packetLength);
 				socket.receive(packet);
-				//System.out.println("UDP packet received.");
+				// System.out.println("UDP packet received.");
 
 				// Handle packet then loop back
 				UDPPacketHandler handle = new UDPPacketHandler(packet);
@@ -58,7 +59,13 @@ public class UDPManager implements Runnable {
 
 	public void sendPacket(DatagramPacket packet) {
 		try {
-			socket.send(packet);
+			int r = (int) (100 * Math.random());
+			if (r > 10) {
+				socket.send(packet);
+				System.out.println("YAY, " + r);
+			} else {
+				System.out.println("DROP IT LIKE ITS HOT, " + r);
+			}
 		} catch (IOException e) {
 			System.err
 					.println("Could not send packet on UDP." + e.getMessage());

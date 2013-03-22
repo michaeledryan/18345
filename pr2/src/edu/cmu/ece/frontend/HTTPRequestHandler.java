@@ -6,6 +6,8 @@ import java.io.PrintWriter;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import edu.cmu.ece.backend.PeerData;
 import edu.cmu.ece.backend.RoutingTable;
@@ -29,6 +31,7 @@ public class HTTPRequestHandler {
 	private HTTPRequestPacket request;
 	private OutputStream out;
 	private PrintWriter textOut;
+	private HTTPClientHandler handler;
 
 	private int clientID;
 
@@ -41,11 +44,12 @@ public class HTTPRequestHandler {
 	 * @param textoutput
 	 */
 	public HTTPRequestHandler(int id, HTTPRequestPacket request,
-			OutputStream output, PrintWriter textoutput) {
+			OutputStream output, PrintWriter textoutput, HTTPClientHandler handler) {
 		this.clientID = id;
 		this.request = request;
 		this.out = output;
 		this.textOut = textoutput;
+		this.handler = handler;
 	}
 
 	/**
@@ -177,6 +181,12 @@ public class HTTPRequestHandler {
 					remote.getIP(), remote.getPort(), packetData,
 					UDPPacketType.REQUEST, 0);
 			udp.sendPacket(backendRequest.getPacket());
+			handler.keepRequesting(backendRequest.getPacket());
+			/*
+			 * Construct a RequestPAcketSender that times out on itself. Timeout
+			 * calls HTTPCLientHandler to resend if something hasn't come in
+			 * yet.
+			 */
 		} catch (UnknownHostException e) {
 			System.err.println("Invalid host provided in routing table.");
 		}

@@ -31,7 +31,7 @@ public class UDPPacketHandler implements Runnable {
 			if (router.getRequest(pd) != null) {
 				router.getRequest(pd).kill();
 			}
-	//		System.out.println("\tRequest for content over UDP.");
+			System.out.println("\tRequest for content over UDP.");
 			UDPRequestHandler handler = new UDPRequestHandler(packet);
 			int numPackets = handler.initializeRequest();
 			router.addToRequests(

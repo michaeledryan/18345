@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.DatagramPacket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -29,6 +30,7 @@ public class HTTPClientHandler implements Runnable {
 	private int id;
 	private boolean listening = true;
 	private boolean sending = false;
+	private boolean gotAck = false;
 
 	private PriorityBlockingQueue<UDPPacket> packetQueue = new PriorityBlockingQueue<UDPPacket>();
 	private ConcurrentSkipListSet<Integer> received = new ConcurrentSkipListSet<Integer>();
@@ -74,7 +76,7 @@ public class HTTPClientHandler implements Runnable {
 				// Parse request, send response
 				request = new HTTPRequestPacket(in);
 				HTTPRequestHandler responder = new HTTPRequestHandler(id,
-						request, out, textOut);
+						request, out, textOut, this);
 
 				// System.out.println("HTTP request received, client " + id);
 				responder.determineRequest();
@@ -82,6 +84,7 @@ public class HTTPClientHandler implements Runnable {
 				// Clear received
 				nextSeqNumToSend = 0;
 				received.clear();
+				gotAck = false;
 
 				// Check if we must close the connection.
 				String connection = request.getHeader("Connection");
@@ -124,6 +127,7 @@ public class HTTPClientHandler implements Runnable {
 	 *            the packet to be added/
 	 */
 	public void addToQueue(UDPPacket packet) {
+		gotAck = true;
 		if (client.isClosed()) {
 			// System.out.println("\tClient is dead, dismiss incoming");
 			packetQueue.clear();
@@ -197,6 +201,7 @@ public class HTTPClientHandler implements Runnable {
 				if (client.isClosed()) {
 					System.out.println("\tClient is dead.");
 					packetQueue.clear();
+					gotAck = false;
 					break;
 				}
 			}
@@ -204,5 +209,18 @@ public class HTTPClientHandler implements Runnable {
 		}
 		
 		sending = false;
+	}
+
+	public void keepRequesting(DatagramPacket packet) {
+		if (!gotAck){
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			UDPManager.getInstance().sendPacket(packet);
+			keepRequesting(packet);
+		}
 	}
 }
