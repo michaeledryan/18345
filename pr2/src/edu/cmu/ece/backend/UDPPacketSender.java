@@ -24,8 +24,6 @@ public class UDPPacketSender extends TimerTask implements
 		if (requester.isAlive()) {
 			udp.sendPacket(requester.getPacket(seqNum).getPacket());
 			new Timer().schedule(this, timeout);
-		} else {
-			System.out.println("MY PARENT IS DEAD :(");
 		}
 	}
 
@@ -33,8 +31,6 @@ public class UDPPacketSender extends TimerTask implements
 	public void run() {
 		if (requester.isAlive() && ttl != 0) {
 			sender.requestResend(this);
-		} else {
-			System.out.println("MY PARENT IS DEAD :(");
 		}
 	}
 

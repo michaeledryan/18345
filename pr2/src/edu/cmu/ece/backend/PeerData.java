@@ -14,19 +14,22 @@ public class PeerData {
 		this.request = request;
 	}
 	
-	
-	public int getRate() {
-		return client;
+	public String getIP() {
+		return ip;
 	}
 	
 	public int getPort() {
 		return port;
 	}
 	
-	public String getIP() {
-		return ip;
+	public int getClient() {
+		return client;
 	}
-	
+
+	public int getRequest() {
+		return request;
+	}
+
 	@Override
 	public boolean equals(Object obj){
 		if (!(obj instanceof PeerData)){

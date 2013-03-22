@@ -173,10 +173,12 @@ public class UDPRequestHandler {
 	}
 
 	public void kill() {
-		System.out.println("\tWe have slain client "
-				+ backendRequest.getClientID() + " request " + id);
-		alive = false;
-		UDPSender.getInstance().clearRequester(this);
+		if (alive) {
+			System.out.println("\tWe have slain client "
+					+ backendRequest.getClientID() + " request " + id);
+			alive = false;
+			UDPSender.getInstance().clearRequester(this);
+		}
 	}
 
 	public boolean isAlive() {
