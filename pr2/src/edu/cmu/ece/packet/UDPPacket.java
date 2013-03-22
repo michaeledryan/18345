@@ -23,8 +23,8 @@ public class UDPPacket implements Comparable<UDPPacket> {
 	// Custom packet body
 	private byte[] body;
 	private int dataLength; // Length of the data being sent, excluding header
-	
-	// Constructor to parse in received packet
+
+	// Constructor	 to parse in received packet
 	public UDPPacket(DatagramPacket packet) {
 		// Get raw packet information from UDP
 		datagram = packet;

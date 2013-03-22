@@ -59,6 +59,7 @@ public class HTTPClientHandler implements Runnable {
 		out = client.getOutputStream();
 		textOut = new PrintWriter(out, true);
 		RoutingTable.getInstance().addtoIds(id, this);
+		RoutingTable.getInstance().setBitRate(id, 0);
 	}
 
 	/**

@@ -10,8 +10,8 @@ public class RoutingTable {
 	private static RoutingTable instance = null;
 	private Map<String, PeerData> fileNamesToPeerData = new ConcurrentHashMap<String, PeerData>();
 	private Map<Integer, HTTPClientHandler> idsToClientHandlers = new ConcurrentHashMap<Integer, HTTPClientHandler>();
-	private int bitRate = 1000; // What's the default value here?
 	private Map<PeerData, UDPRequestHandler> peersToRequests = new ConcurrentHashMap<PeerData, UDPRequestHandler>();
+	private Map<Integer, Integer> clientsToBitRates = new ConcurrentHashMap<Integer, Integer>();
 
 	/**
 	 * Returns the instance of RoutingTable.
@@ -138,17 +138,25 @@ public class RoutingTable {
 	}
 
 	/**
-	 * Gets the current bit rate in bits/second.
+	 * Gets the current bit rate in bits/second for a given client.
 	 */
-	public int getBitRate() {
-		return bitRate;
+	public int getClientBitRate(int clientID) {
+		return clientsToBitRates.get(new Integer(clientID));
 	}
 
 	/**
 	 * Sets the bitRate.
 	 */
-	public void setBitRate(int rate) {
-		bitRate = rate;
+	public void setBitRate(int clientID, int rate) {
+		clientsToBitRates.put(new Integer(clientID), rate);
 	}
+	
+	/**
+	 * Removes the bitRate.
+	 */
+	public void removeBitRate(int clientID) {
+		clientsToBitRates.remove(new Integer(clientID));
+	}
+	
 
 }

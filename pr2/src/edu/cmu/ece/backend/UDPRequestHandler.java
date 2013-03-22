@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import edu.cmu.ece.DCException;
 import edu.cmu.ece.packet.HTTPRequestPacket;
@@ -20,16 +22,43 @@ import edu.cmu.ece.packet.UDPPacketType;
 public class UDPRequestHandler {
 	private UDPPacket backendRequest;
 	private HTTPRequestPacket frontendRequest;
-	
+
 	private int id;
 	private String header;
 	private ResponseFileData fileData;
 	private int numPackets;
 	private boolean alive = true;
+	private float byteRate;
+	private long timeLastSent = 0;
+	private int bytesSent = 0;
 
 	private static int dataLength = 65000;
 	private static int requests = 0;
 
+	/**
+	 * Returns whether or not we can send a new packet.
+	 * 
+	 * @param numBytes
+	 * @return
+	 */
+	public boolean canISend(int numBytes) {
+		numBytes = dataLength;
+		if (timeLastSent == 0) {
+			timeLastSent = System.currentTimeMillis();
+			return true;
+		}
+		
+		long now = System.currentTimeMillis();
+		if (bytesSent + numBytes >= (now - timeLastSent) * byteRate / 1000) {
+			System.err.println("CANNOT SEND: RATE IS " + byteRate);
+			return false;
+		} else {
+			bytesSent += numBytes;
+			timeLastSent = System.currentTimeMillis();
+			System.out.println("CAN SEND");
+			return true;
+		}
+	}
 
 	/**
 	 * Constructor. Sets necessary fields.
@@ -42,7 +71,16 @@ public class UDPRequestHandler {
 		id = ++requests;
 		// Ugly quadruple conversion... easier way?
 		backendRequest = incoming;
-		header = new String(incoming.getData());
+		byte[] requestData = incoming.getData();
+		int bytesRateInt = ByteBuffer.wrap(
+				Arrays.copyOfRange(requestData, 0, 4)).getInt(); // Actually a
+																	// Byte Rate
+		if (bytesRateInt == 0) {
+			bytesRateInt = Integer.MAX_VALUE;
+		}
+		byteRate = (float) bytesRateInt;
+		header = new String(Arrays.copyOfRange(requestData, 4,
+				requestData.length));
 		BufferedReader packetReader = new BufferedReader(new CharArrayReader(
 				header.toCharArray()));
 		try {
@@ -68,7 +106,7 @@ public class UDPRequestHandler {
 		File target = new File(filename);
 		if (target.exists()) {
 			frontendRequest.parseRanges(target);
-			
+
 			try {
 				fileData = new ResponseFileData(target, frontendRequest);
 				numPackets = 1 + fileData.getNumPackets(dataLength);
@@ -77,8 +115,8 @@ public class UDPRequestHandler {
 				System.err.println("Couldn't respond to UDP client.");
 			}
 		} else {
-				numPackets = 1;
-				this.generate404Header();
+			numPackets = 1;
+			this.generate404Header();
 		}
 		return numPackets;
 	}
@@ -133,14 +171,14 @@ public class UDPRequestHandler {
 		}
 		return packet;
 	}
-	
+
 	public void kill() {
 		System.out.println("\tWe have slain client "
 				+ backendRequest.getClientID() + " request " + id);
 		alive = false;
 		UDPSender.getInstance().clearRequester(this);
 	}
-	
+
 	public boolean isAlive() {
 		return alive;
 	}

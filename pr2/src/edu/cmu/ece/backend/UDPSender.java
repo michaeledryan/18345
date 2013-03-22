@@ -1,5 +1,7 @@
 package edu.cmu.ece.backend;
 
+import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -10,12 +12,11 @@ public class UDPSender implements Runnable {
 
 	private static long timeout = 20; // ms
 
-	ConcurrentHashMap<UDPRequestHandler, ConcurrentSkipListSet<Integer>> acked
-		= new ConcurrentHashMap<UDPRequestHandler, ConcurrentSkipListSet<Integer>>();
-	ConcurrentHashMap<UDPRequestHandler, ConcurrentSkipListSet<Integer>> nacked
-		= new ConcurrentHashMap<UDPRequestHandler, ConcurrentSkipListSet<Integer>>();
-	PriorityBlockingQueue<UDPPacketSender> queue = new PriorityBlockingQueue<UDPPacketSender>();
-	PriorityBlockingQueue<UDPPacketSender> resendQueue = new PriorityBlockingQueue<UDPPacketSender>();
+	Map<UDPRequestHandler, ConcurrentSkipListSet<Integer>> acked = new ConcurrentHashMap<UDPRequestHandler, ConcurrentSkipListSet<Integer>>();
+	Map<UDPRequestHandler, ConcurrentSkipListSet<Integer>> nacked = new ConcurrentHashMap<UDPRequestHandler, ConcurrentSkipListSet<Integer>>();
+	Queue<UDPPacketSender> queue = new PriorityBlockingQueue<UDPPacketSender>();
+	Queue<UDPPacketSender> resendQueue = new PriorityBlockingQueue<UDPPacketSender>();
+	Map<UDPRequestHandler, Integer> clientsToBitrates = new ConcurrentHashMap<UDPRequestHandler, Integer>();
 
 	public static UDPSender getInstance() {
 		if (instance == null) {
@@ -34,27 +35,47 @@ public class UDPSender implements Runnable {
 	@Override
 	public void run() {
 		while (true) {
-			/*
-			 * try { Thread.sleep(50); } catch (InterruptedException e) { //
-			 * TODO Auto-generated catch block e.printStackTrace(); }
-			 */
+
+			try {
+				Thread.sleep(50);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 
 			UDPPacketSender sender;
 			if (!resendQueue.isEmpty() || !queue.isEmpty()) {
 				while (!resendQueue.isEmpty() || !queue.isEmpty()) {
 					if (!resendQueue.isEmpty()) {
+
 						sender = resendQueue.remove();
-						sender.send(udp);
+						UDPRequestHandler requester = sender.getRequester();
+						if (requester.canISend(0)) {
 
-						// Remove from nacked - we finally responded
-						nacked.get(sender.getRequester()).remove(
-								sender.getSeqNum());
+							sender.send(udp);
+							// Remove from nacked - we finally responded
+							nacked.get(sender.getRequester()).remove(
+									sender.getSeqNum());
+						} else {
+							resendQueue.add(sender);
+						}
+
 					}
 
-					else if (!queue.isEmpty()){
+					else if (!queue.isEmpty()) {
 						sender = queue.remove();
-						sender.send(udp);
+						UDPRequestHandler requester = sender.getRequester();
+						if (requester.canISend(0)) {
+
+							sender.send(udp);
+							// Remove from nacked - we finally responded
+							nacked.get(sender.getRequester()).remove(
+									sender.getSeqNum());
+						} else {
+							queue.add(sender);
+						}
 					}
+
 				}
 			}
 		}
@@ -93,7 +114,7 @@ public class UDPSender implements Runnable {
 			resendQueue.add(newRequest);
 		}
 	}
-	
+
 	public void ackPacket(UDPRequestHandler requester, int seqNum) {
 		ConcurrentSkipListSet<Integer> ackedSet = acked.get(requester);
 		if (ackedSet != null)

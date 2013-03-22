@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import edu.cmu.ece.backend.PeerData;
 import edu.cmu.ece.backend.RoutingTable;
@@ -90,8 +92,7 @@ public class HTTPRequestHandler {
 			return;
 		} else {
 			System.out.println("HTTP Request, client " + clientID
-					+ "\n\t404 Not Found: "
-					+ request.getRequest());
+					+ "\n\t404 Not Found: " + request.getRequest());
 			HTTPResponses.send404(request, textOut);
 			return;
 		}
@@ -121,14 +122,12 @@ public class HTTPRequestHandler {
 		System.out.println("\t\tPath: " + host + ":" + port);
 		System.out.println("\t\tBitrate: " + rate);
 
-		
 		PeerData peerdata = new PeerData(host, Integer.parseInt(port),
 				Integer.parseInt(rate), 0);
 		router.addtofileNames(path, peerdata);
-		
+
 		HTTPResponses.sendPeerConfigMessage(path, request, textOut);
-		
-		
+
 		// Adds parameters to the Routing table.
 	}
 
@@ -136,12 +135,12 @@ public class HTTPRequestHandler {
 		System.out.println("HTTP Request, client " + clientID);
 		System.out.println("\tConfig request with parameters:");
 		System.out.println("\t\t" + parameters);
-		
+
 		int rate = Integer.parseInt(parameters.split("=")[1]);
-		
-		router.setBitRate(rate);
+
+		router.setBitRate(clientID, rate);
 		// TODO: figure out how to implement bitrate stuff
-		
+
 		HTTPResponses.sendBitRateConfigMessage(rate, request, textOut);
 	}
 
@@ -159,14 +158,23 @@ public class HTTPRequestHandler {
 			HTTPResponses.send404(request, textOut);
 			return;
 		}
-		
+
 		// Send UDP request packet with full HTTP Header copied in
 		try {
-			String requestString = "GET " + target + " HTTP/1.1\r\n"
-					+ request.getFullHeader();
+
+			byte[] requestStringBytes = ("GET " + target + " HTTP/1.1\r\n" + request
+					.getFullHeader()).getBytes();
+
+			byte[] packetData = new byte[4 + requestStringBytes.length];
+
+			System.arraycopy(
+					ByteBuffer.allocate(4)
+							.putInt(router.getClientBitRate(clientID)).array(),
+					0, packetData, 0, 4);
+			System.arraycopy(requestStringBytes, 0, packetData, 4,
+					requestStringBytes.length);
 			UDPPacket backendRequest = new UDPPacket(clientID, 0,
-					remote.getIP(),
-					remote.getPort(), requestString.getBytes(),
+					remote.getIP(), remote.getPort(), packetData,
 					UDPPacketType.REQUEST, 0);
 			udp.sendPacket(backendRequest.getPacket());
 		} catch (UnknownHostException e) {
