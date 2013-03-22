@@ -37,7 +37,6 @@ public class RoutingTable {
 	 */
 	public UDPRequestHandler addToRequests(PeerData pd,
 			UDPRequestHandler handler) {
-		System.out.println(pd.getRequest());
 		return peersToRequests.put(pd, handler);
 
 	}

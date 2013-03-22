@@ -49,7 +49,7 @@ public class UDPSender implements Runnable {
 
 						sender = resendQueue.remove();
 						UDPRequestHandler requester = sender.getRequester();
-						if (requester.canISend(0)) {
+						if (requester.canISend()) {
 
 							sender.send(udp);
 							// Remove from nacked - we finally responded
@@ -64,7 +64,7 @@ public class UDPSender implements Runnable {
 					else if (!queue.isEmpty()) {
 						sender = queue.remove();
 						UDPRequestHandler requester = sender.getRequester();
-						if (requester.canISend(0)) {
+						if (requester.canISend()) {
 							sender.send(udp);
 						} else {
 							queue.add(sender);
@@ -102,8 +102,6 @@ public class UDPSender implements Runnable {
 
 		ConcurrentSkipListSet<Integer> ackedSet = acked.get(requester);
 		if (!ackedSet.contains(seqNum)) {
-			// System.err.print(" " + seqNum + ";");
-			// System.out.println(acked.toString());
 			// Recreate requester so we can reschedule it... TimerTask is dumb
 			UDPPacketSender newRequest = new UDPPacketSender(requester, seqNum,
 					timeout, request.getTTL() - 1);
@@ -118,13 +116,7 @@ public class UDPSender implements Runnable {
 	}
 
 	public void nackPacket(UDPRequestHandler requester, int seqNum) {
-		if (requester == null)
-			System.out.println("REQUESTER IS NULL");
-		if (nacked == null)
-			System.out.println("NACKED IS NULL");
 		ConcurrentSkipListSet<Integer> nackedSet = nacked.get(requester);
-		if (nackedSet == null)
-			System.out.println("NACKEDSET IS NULL");
 		if (!nackedSet.contains(seqNum)) {
 			UDPPacketSender newRequest = new UDPPacketSender(requester, seqNum,
 					timeout, 5);

@@ -30,39 +30,37 @@ public class UDPRequestHandler {
 	private int period;
 	private int phase;
 	private boolean alive = true;
-	private float byteRate;
+	private int byteRate;
+	private int bytesSent;
+	private int dataLength;
 	private long timeLastSent = 0;
-	private int bytesSent = 0;
 
-	private static int dataLength = 65000;
+	private static int maxDataLength = 65000;
 	private static int requests = 0;
 
 	/**
 	 * Returns whether or not we can send a new packet.
 	 * 
-	 * @param numBytes
 	 * @return
 	 */
-	public boolean canISend(int numBytes) {
+	public boolean canISend() {
 		if (byteRate == 0) {
 			return true;
 		}
-		numBytes = dataLength;
-		if (timeLastSent == 0) {
-			timeLastSent = System.currentTimeMillis();
-			return true;
-		}
 		
-		long now = System.currentTimeMillis();
-		if (bytesSent + numBytes >= (now - timeLastSent) * byteRate / 1000) {
-			System.err.println("CANNOT SEND: RATE IS " + byteRate);
-			return false;
-		} else {
-			bytesSent += numBytes;
+		int numBytes = dataLength;
+		if ((System.currentTimeMillis() - timeLastSent) > 1000) {
 			timeLastSent = System.currentTimeMillis();
-			System.out.println("CAN SEND");
+			bytesSent = 0;
+
+			return true;
+		} else if (bytesSent + numBytes < byteRate) {
+			bytesSent += numBytes;
+
 			return true;
 		}
+
+		return false;
 	}
 
 	/**
@@ -81,9 +79,20 @@ public class UDPRequestHandler {
 		byte[] requestData = incoming.getData();
 
 		// Get byterate
-		int bytesRateInt = ByteBuffer.wrap(
-				Arrays.copyOfRange(requestData, 0, 4)).getInt();
-		byteRate = (float) bytesRateInt;
+		byteRate = ByteBuffer.wrap(Arrays.copyOfRange(requestData, 0, 4))
+				.getInt();
+
+		// Set dataLength based on byterate
+		dataLength = byteRate;
+		while (dataLength > maxDataLength)
+			dataLength /= 2;
+
+		if (dataLength == 0)
+			dataLength = maxDataLength;
+
+		System.out.println("\tRequest has byteRate: " + byteRate);
+		System.out.println("\tUsing packets of size: " + dataLength);
+
 
 		// Get period
 		period = ByteBuffer.wrap(Arrays.copyOfRange(requestData, 4, 8))

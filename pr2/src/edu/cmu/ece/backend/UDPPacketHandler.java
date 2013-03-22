@@ -31,7 +31,7 @@ public class UDPPacketHandler implements Runnable {
 			if (router.getRequest(pd) != null) {
 				router.getRequest(pd).kill();
 			}
-			System.out.println("\tRequest for content over UDP.");
+			System.out.println("Request for content over UDP.");
 			UDPRequestHandler handler = new UDPRequestHandler(packet);
 			int numPackets = handler.initializeRequest();
 			router.addToRequests(
@@ -48,8 +48,6 @@ public class UDPPacketHandler implements Runnable {
 			if (router.getRequest(pd) != null) {
 				UDPRequestHandler request = router.getRequest(pd);
 				sender.ackPacket(request, packet.getSequenceNumber());
-			} else {
-				System.out.println("\tRequester ACK" + pd.getRequest() + " is NULL?");
 			}
 			return;
 			// We got the packet, so let's send another. We still have to
@@ -61,19 +59,15 @@ public class UDPPacketHandler implements Runnable {
 			if (router.getRequest(pd) != null) {
 				UDPRequestHandler request = router.getRequest(pd);
 				sender.nackPacket(request, packet.getSequenceNumber());
-			} else {
-				System.out.println("\tRequester NAK is NULL?");
 			}
 			return;
 			// Currently there is no support for NAKs
 
 		case KILL:
-		//	System.out.println("\tGot kill request from client "
-			//		+ packet.getClientID());
+			System.out.println("Got kill request from client "
+					+ packet.getClientID());
 			if (router.getRequest(pd) != null) {
 				router.getRequest(pd).kill();
-			} else {
-				System.out.println("\tRequester KILL is NULL?");
 			}
 			return;
 			// Kill a request if the client hung up
