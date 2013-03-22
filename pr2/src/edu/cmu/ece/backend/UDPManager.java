@@ -60,9 +60,9 @@ public class UDPManager implements Runnable {
 	public void sendPacket(DatagramPacket packet) {
 		try {
 			int r = (int) (100 * Math.random());
-			if (r > 10) {
+			if (r > 50) {
 				socket.send(packet);
-				System.out.println("YAY, " + r);
+				// System.out.println("YAY, " + r);
 			} else {
 				System.out.println("DROP IT LIKE ITS HOT, " + r);
 			}

@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.net.DatagramPacket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -78,13 +77,16 @@ public class HTTPClientHandler implements Runnable {
 				HTTPRequestHandler responder = new HTTPRequestHandler(id,
 						request, out, textOut, this);
 
-				// System.out.println("HTTP request received, client " + id);
-				responder.determineRequest();
-
-				// Clear received
+				// Clear received queue and its next element
 				nextSeqNumToSend = 0;
 				received.clear();
+
+				// Set this flag to detect whether we have received any response
+				// data to the original request
 				gotAck = false;
+
+				// System.out.println("HTTP request received, client " + id);
+				responder.determineRequest();
 
 				// Check if we must close the connection.
 				String connection = request.getHeader("Connection");
@@ -121,9 +123,9 @@ public class HTTPClientHandler implements Runnable {
 	}
 
 	public boolean getGotAck() {
-		return gotAck;
+		return this.gotAck;
 	}
-	
+
 	/**
 	 * Adds a given UDPPacket to the client. Just adds everything
 	 * 

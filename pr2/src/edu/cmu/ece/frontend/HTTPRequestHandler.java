@@ -6,9 +6,6 @@ import java.io.PrintWriter;
 import java.net.DatagramPacket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import edu.cmu.ece.backend.PeerData;
 import edu.cmu.ece.backend.RoutingTable;
@@ -184,33 +181,26 @@ public class HTTPRequestHandler {
 					UDPPacketType.REQUEST, 0);
 			udp.sendPacket(backendRequest.getPacket());
 
-			// handler.keepRequesting(backendRequest.getPacket());
-
+			// Set up simple spin loop to resend the request
 			final HTTPClientHandler myHandler = handler;
 			final DatagramPacket myPacket = backendRequest.getPacket();
-
 			new Thread(new Runnable() {
 
 				@Override
 				public void run() {
-					if (myHandler.getGotAck()) {
-						try {
-							Thread.sleep(1000);
-						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
+					try {
+						Thread.sleep(200);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+
+					if (!myHandler.getGotAck()) {
 						UDPManager.getInstance().sendPacket(myPacket);
 						this.run();
 					}
 				}
-			});
-
-			/*
-			 * Construct a RequestPAcketSender that times out on itself. Timeout
-			 * calls HTTPCLientHandler to resend if something hasn't come in
-			 * yet.
-			 */
+			}).start();
 		} catch (UnknownHostException e) {
 			System.err.println("Invalid host provided in routing table.");
 		}
