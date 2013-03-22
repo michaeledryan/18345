@@ -3,6 +3,7 @@ package edu.cmu.ece.frontend;
 import java.io.File;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.DatagramPacket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -44,7 +45,8 @@ public class HTTPRequestHandler {
 	 * @param textoutput
 	 */
 	public HTTPRequestHandler(int id, HTTPRequestPacket request,
-			OutputStream output, PrintWriter textoutput, HTTPClientHandler handler) {
+			OutputStream output, PrintWriter textoutput,
+			HTTPClientHandler handler) {
 		this.clientID = id;
 		this.request = request;
 		this.out = output;
@@ -181,7 +183,29 @@ public class HTTPRequestHandler {
 					remote.getIP(), remote.getPort(), packetData,
 					UDPPacketType.REQUEST, 0);
 			udp.sendPacket(backendRequest.getPacket());
-			handler.keepRequesting(backendRequest.getPacket());
+
+			// handler.keepRequesting(backendRequest.getPacket());
+
+			final HTTPClientHandler myHandler = handler;
+			final DatagramPacket myPacket = backendRequest.getPacket();
+
+			new Thread(new Runnable() {
+
+				@Override
+				public void run() {
+					if (myHandler.getGotAck()) {
+						try {
+							Thread.sleep(1000);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						UDPManager.getInstance().sendPacket(myPacket);
+						this.run();
+					}
+				}
+			});
+
 			/*
 			 * Construct a RequestPAcketSender that times out on itself. Timeout
 			 * calls HTTPCLientHandler to resend if something hasn't come in

@@ -120,6 +120,10 @@ public class HTTPClientHandler implements Runnable {
 		return this.id;
 	}
 
+	public boolean getGotAck() {
+		return gotAck;
+	}
+	
 	/**
 	 * Adds a given UDPPacket to the client. Just adds everything
 	 * 
@@ -211,16 +215,4 @@ public class HTTPClientHandler implements Runnable {
 		sending = false;
 	}
 
-	public void keepRequesting(DatagramPacket packet) {
-		if (!gotAck){
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			UDPManager.getInstance().sendPacket(packet);
-			keepRequesting(packet);
-		}
-	}
 }
