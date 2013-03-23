@@ -2,16 +2,17 @@ package edu.cmu.ece.backend;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 import edu.cmu.ece.frontend.HTTPClientHandler;
 
 public class RoutingTable {
 
 	private static RoutingTable instance = null;
-	private Map<String, PeerData> fileNamesToPeerData = new ConcurrentHashMap<String, PeerData>();
+	private Map<String, ConcurrentSkipListSet<PeerData>> fileNamesToPeerData = new ConcurrentHashMap<String, ConcurrentSkipListSet<PeerData>>();
 	private Map<Integer, HTTPClientHandler> idsToClientHandlers = new ConcurrentHashMap<Integer, HTTPClientHandler>();
 	private Map<PeerData, UDPRequestHandler> peersToRequests = new ConcurrentHashMap<PeerData, UDPRequestHandler>();
-	private Map<Integer, Integer> clientsToBitRates = new ConcurrentHashMap<Integer, Integer>();
+	private Map<String, Integer> clientsToBitRates = new ConcurrentHashMap<String, Integer>();
 
 	/**
 	 * Returns the instance of RoutingTable.
@@ -36,7 +37,6 @@ public class RoutingTable {
 	 */
 	public UDPRequestHandler addToRequests(PeerData pd,
 			UDPRequestHandler handler) {
-		System.out.println(pd.getRequest());
 		return peersToRequests.put(pd, handler);
 
 	}
@@ -57,7 +57,16 @@ public class RoutingTable {
 	 */
 	public PeerData addtofileNames(String path, PeerData ip) {
 		synchronized (fileNamesToPeerData) {
-			return fileNamesToPeerData.put(path, ip);
+			ConcurrentSkipListSet<PeerData> peers;
+			if (fileNamesToPeerData.containsKey(path)) {
+				peers = fileNamesToPeerData.get(path);
+			} else {
+				peers = new ConcurrentSkipListSet<PeerData>();
+				fileNamesToPeerData.put(path, peers);
+			}
+			peers.add(ip);
+
+			return ip;
 		}
 	}
 
@@ -107,9 +116,9 @@ public class RoutingTable {
 	/**
 	 * Removes a path from the table. Probably never used.
 	 */
-	public PeerData removeFile(String path) {
+	public void removeFile(String path) {
 		synchronized (fileNamesToPeerData) {
-			return fileNamesToPeerData.remove(path);
+			fileNamesToPeerData.remove(path);
 		}
 	}
 
@@ -123,7 +132,7 @@ public class RoutingTable {
 	/**
 	 * Gets PeerData given file path.
 	 */
-	public PeerData getPeerData(String path) {
+	public ConcurrentSkipListSet<PeerData> getPeerData(String path) {
 		return fileNamesToPeerData.get(path);
 	}
 
@@ -140,15 +149,19 @@ public class RoutingTable {
 	/**
 	 * Gets the current bit rate in bits/second for a given client.
 	 */
-	public int getClientBitRate(int clientID) {
-		return clientsToBitRates.get(new Integer(clientID));
+	public int getClientBitRate(String clientIP) {
+		return clientsToBitRates.get(clientIP);
 	}
 
 	/**
 	 * Sets the bitRate.
 	 */
-	public void setBitRate(int clientID, int rate) {
-		clientsToBitRates.put(new Integer(clientID), rate);
+	public void setBitRate(String clientIP, int rate) {
+		clientsToBitRates.put(clientIP, rate);
+	}
+
+	public boolean bitRateSet(String clientIP) {
+		return clientsToBitRates.containsKey(clientIP);
 	}
 
 	/**

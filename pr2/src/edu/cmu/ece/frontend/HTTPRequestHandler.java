@@ -6,9 +6,7 @@ import java.io.PrintWriter;
 import java.net.DatagramPacket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 import edu.cmu.ece.backend.PeerData;
 import edu.cmu.ece.backend.RoutingTable;
@@ -35,6 +33,7 @@ public class HTTPRequestHandler {
 	private HTTPClientHandler handler;
 
 	private int clientID;
+	private String clientIP;
 
 	/**
 	 * Constructor. Sets necessary fields.
@@ -44,10 +43,11 @@ public class HTTPRequestHandler {
 	 * @param output
 	 * @param textoutput
 	 */
-	public HTTPRequestHandler(int id, HTTPRequestPacket request,
+	public HTTPRequestHandler(int id, String ip, HTTPRequestPacket request,
 			OutputStream output, PrintWriter textoutput,
 			HTTPClientHandler handler) {
 		this.clientID = id;
+		this.clientIP = ip;
 		this.request = request;
 		this.out = output;
 		this.textOut = textoutput;
@@ -132,7 +132,7 @@ public class HTTPRequestHandler {
 				Integer.parseInt(rate), 0);
 		router.addtofileNames(path, peerdata);
 
-		HTTPResponses.sendPeerConfigMessage(path, request, textOut);
+		HTTPResponses.sendPeerConfigMessage(path, request, textOut, peerdata);
 
 		// Adds parameters to the Routing table.
 	}
@@ -144,7 +144,7 @@ public class HTTPRequestHandler {
 
 		int rate = Integer.parseInt(parameters.split("=")[1]);
 
-		router.setBitRate(clientID, rate);
+		router.setBitRate(clientIP, rate);
 		// TODO: figure out how to implement bitrate stuff
 
 		HTTPResponses.sendBitRateConfigMessage(rate, request, textOut);
@@ -159,60 +159,69 @@ public class HTTPRequestHandler {
 		System.out.println("\tRemote request for: " + target);
 		System.out.println("\tAsking for range: "
 				+ request.getFullRangeString());
-		PeerData remote = router.getPeerData(target);
-		if (remote == null) {
+		System.out.println("\tRequesting bitrate: "
+				+ router.getClientBitRate(clientIP));
+		ConcurrentSkipListSet<PeerData> peers = router.getPeerData(target);
+		if (peers == null || peers.size() == 0) {
 			HTTPResponses.send404(request, textOut);
 			return;
 		}
 
-		// Send UDP request packet with full HTTP Header copied in
-		try {
+		// Set up the request packet
+		byte[] requestStringBytes = ("GET " + target + " HTTP/1.1\r\n" + request
+				.getFullHeader()).getBytes();
+		byte[] packetData = new byte[12 + requestStringBytes.length];
+		// Add bitrate
+		System.arraycopy(
+				ByteBuffer.allocate(4)
+						.putInt(router.getClientBitRate(clientIP)).array(), 0,
+				packetData, 0, 4);
+		// Add data
+		System.arraycopy(requestStringBytes, 0, packetData, 12,
+				requestStringBytes.length);
 
-			byte[] requestStringBytes = ("GET " + target + " HTTP/1.1\r\n" + request
-					.getFullHeader()).getBytes();
+		// Add period
+		System.arraycopy(ByteBuffer.allocate(4).putInt(peers.size()).array(), 0,
+				packetData, 4, 4);
 
-			byte[] packetData = new byte[4 + requestStringBytes.length];
-
-			System.arraycopy(
-					ByteBuffer.allocate(4)
-							.putInt(router.getClientBitRate(clientID)).array(),
-					0, packetData, 0, 4);
-			System.arraycopy(requestStringBytes, 0, packetData, 4,
-					requestStringBytes.length);
-			UDPPacket backendRequest = new UDPPacket(clientID, 0,
-					remote.getIP(), remote.getPort(), packetData,
-					UDPPacketType.REQUEST, 0);
-			udp.sendPacket(backendRequest.getPacket());
-
-			// handler.keepRequesting(backendRequest.getPacket());
-
-			final HTTPClientHandler myHandler = handler;
-			final DatagramPacket myPacket = backendRequest.getPacket();
-
-			new Thread(new Runnable() {
-
-				@Override
-				public void run() {
-					if (myHandler.getGotAck()) {
+		// Send UDP request packet with full HTTP Header copied in to each
+		// possible server
+		int phase = 0;
+		for(PeerData remote : peers) {
+			try {
+				// Add phase offset
+				System.arraycopy(ByteBuffer.allocate(4).putInt(phase).array(), 0,
+						packetData, 8, 4);
+				phase++;
+				
+				UDPPacket backendRequest = new UDPPacket(clientID, 0,
+						remote.getIP(), remote.getPort(), packetData,
+						UDPPacketType.REQUEST, 0);
+				udp.sendPacket(backendRequest.getPacket());
+	
+				// Set up simple spin loop to resend the request
+				final HTTPClientHandler myHandler = handler;
+				final DatagramPacket myPacket = backendRequest.getPacket();
+				new Thread(new Runnable() {
+	
+					@Override
+					public void run() {
 						try {
-							Thread.sleep(1000);
+							Thread.sleep(200);
 						} catch (InterruptedException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
-						UDPManager.getInstance().sendPacket(myPacket);
-						this.run();
+	
+						if (!myHandler.getGotAck()) {
+							UDPManager.getInstance().sendPacket(myPacket);
+							this.run();
+						}
 					}
-				}
-			});
-
-			/*
-			 * Construct a RequestPAcketSender that times out on itself. Timeout
-			 * calls HTTPCLientHandler to resend if something hasn't come in
-			 * yet.
-			 */
-		} catch (UnknownHostException e) {
-			System.err.println("Invalid host provided in routing table.");
+				}).start();
+			} catch (UnknownHostException e) {
+				System.err.println("Invalid host provided in routing table.");
+			}
 		}
 
 		/*

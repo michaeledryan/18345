@@ -5,6 +5,13 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketTimeoutException;
 
+/**
+ * Handles the UDP communication for the server. Receives incoming packets and
+ * sends outgoing ones.
+ * 
+ * @author michaels
+ * 
+ */
 public class UDPManager implements Runnable {
 	private static int packetLength = 1 << 16;
 	private static int portNum;
@@ -15,6 +22,11 @@ public class UDPManager implements Runnable {
 		portNum = port;
 	}
 
+	/**
+	 * Singleton class
+	 * 
+	 * @return the instance
+	 */
 	public static UDPManager getInstance() {
 		if (instance == null) {
 			instance = new UDPManager();
@@ -25,6 +37,10 @@ public class UDPManager implements Runnable {
 	private UDPManager() {
 	}
 
+	/**
+	 * Blocks waiting for new sockets to come in, then calls a handler on each
+	 * one.
+	 */
 	@Override
 	public void run() {
 		// Open a socket, set its timeout to let us send outgoing packets
@@ -57,12 +73,20 @@ public class UDPManager implements Runnable {
 		}
 	}
 
+	/**
+	 * Sends a packet. The r variable helps simulate packet loss - this was used
+	 * in place of nf.
+	 * 
+	 * @param packet
+	 */
 	public void sendPacket(DatagramPacket packet) {
 		try {
-			int r = (int) (100 * Math.random());
-			if (r >= 0) {
+			int r = (int) (100 * Math.random()); // random number
+			if (r >= 0) { 
+				// check whether or not we actually send the packet.
+							// Change the number to change drop rate.
 				socket.send(packet);
-				System.out.println("YAY, " + r);
+				// System.out.println("YAY, " + r);
 			} else {
 				System.out.println("DROP IT LIKE ITS HOT, " + r);
 			}

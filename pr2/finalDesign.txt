@@ -1,0 +1,69 @@
+Design doc
+
+Team:
+
+Michael Nye (mnye)
+Michael Ryan (mryan)
+
+
+Backend summary:
+
+  If the HTTP frontend receives a request for data located at a properly-configured peer server, it sends a UDPPacket with type REQUEST to the specified peer (or peers, if more than one has the file). This is received by a backend server, which initializes a UDPRequestHandler to handle the construction of data packets and adds the packets to a queue of packets to be sent. This queue is handled by the UDPSender class.
+
+  The UDPSender class maintains two priority queues, one for new packets and one for packets that must be resent. The resending packets take priority over new ones. When a packet is sent, a timeout also starts that will resend the packet if an ACK is not received in time. 
+
+  When the remote backend sends a DATA packet back to the client server, it adds the data to a priority queue of packets that mustnt the first packet in the queue is equal to the sequence number of the next packet that we have to send to the user, packets in the queue are sent until we reach a gap in sequence numbers or finish transmitting all the data. If we cannot send the next packet to the user, a NACK is sent to the remote backend indicating that the packet with a given sequence number has not been received. The packet is then resent and te remote server waits for an ACK.
+
+  If the user hangs up, the client server will send a KILL packet to the remote backend, telling it to stop sending data relating to a specific client's request.
+
+  The server's error recovery mechanism was designed as a selective-repeat ARQ.
+
+  The transfer is limited such that the client server will not receive more than the specified transfer rate in bytes/second from the collection of peers to which it is currently listening. Local testing with Wireshark indicated a limit of traffic on the receiving port within a 10% tolerance.
+
+  Content chunking is achieved by assigning each remote backend a "period" and "phase offset." Servers send every period-th packet and start on the phase offset so that we can interleave data that is being received rather than receive blocks of data and be unable to immediately send them to the user.
+
+
+Our UDP Header will consist of three four-byte integers.
+First:    
+  ClientID number from the originating backend server.
+Second:   
+  RequestID number identifying this request against others from the same client.
+Third:
+  Sequence number, for tracking in our ARQ. This is linked to the ClientID and the sender’s IP address.
+
+Fourth:  
+  UDP Packet type (mapped to integer values), one of:
+      
+  REQUEST: reqeusting a file from another server
+  DATA: File sent to a reqeuster
+  CONFIG: Sends information about backend configuration (not used)
+  ACK: Acknowledgement of a received packet
+  NAK: Negative acknowledgement that the requesting server has not yet received the packet with the same sequence number.
+  KILL: Tells the server to stop handling a specific request.
+
+
+  The remaining bytes are data that are used by the server in specific cases or parts of the file to be sent to the user.
+
+Between the checkpoint and now, several options were added to the UDPPacketType. ACKs were implemented as planned, but it also became necessary to include NACKs and KILL messages. Kill messages are sent if a client has canceled a request and we no longer wish for the servers to send or receive packets relating to that client, and NACKs indicate that the frontend is blocking on a specific packet and cannot respond until receiving it.
+
+
+C: Libraries
+
+Libraries used are standard Java networking, IO, and Collections libraries. No additional files should be needed to supplement the JDK.
+
+
+D: Extra capabilites
+
+  Simultaneous playback
+  Instant load
+  Extra Robustness
+
+E: Extra instructions
+
+  Code should run as specified in the handout. 
+
+  Please note that iptables/nf was not working for us. To test dropped packets we implemented Java code that randomly decides to send a certain proportion of packets or not. The code responsible is located in edu.cmu.edu.backend.UDPManager.java in the function sendPacket, the line "(r >= 0)." The included shell script dropPackets.sh will change the proportion of packets dropped when run as follows:
+
+  ./dropPackets DROPRATE
+
+  where droprate is a number. Note that this modifies source code and though I have tested the sed command used, problems may arise. If all else fails, open the code in a text editor and rebuild. Also, remember to rebuild to see the change in behavior.

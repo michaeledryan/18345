@@ -19,6 +19,13 @@ import edu.cmu.ece.packet.ResponseFileData;
 import edu.cmu.ece.packet.UDPPacket;
 import edu.cmu.ece.packet.UDPPacketType;
 
+/**
+ * Handles a reqeust for data to be sent over the UDP connection to a remote
+ * peer.
+ * 
+ * @author michaels
+ * 
+ */
 public class UDPRequestHandler {
 	private UDPPacket backendRequest;
 	private HTTPRequestPacket frontendRequest;
@@ -27,43 +34,16 @@ public class UDPRequestHandler {
 	private String header;
 	private ResponseFileData fileData;
 	private int numPackets;
+	private int period;
+	private int phase;
 	private boolean alive = true;
-	private float byteRate;
+	private int byteRate;
+	private int dataLength;
 	private long timeLastSent = 0;
 	private int bytesSent = 0;
-	//private boolean couldNotSend = false;
 
-	private static int dataLength = 65000;
+	private static int maxDataLength = 65000;
 	private static int requests = 0;
-
-	/**
-	 * Returns whether or not we can send a new packet.
-	 * 
-	 * @param numBytes
-	 * @return
-	 */
-	public boolean canISend(int numBytes) {
-		if (byteRate == 0) {
-			return true;
-		}
-		numBytes = dataLength;
-		if (timeLastSent == 0) {
-			timeLastSent = System.currentTimeMillis();
-			return true;
-		}
-		
-		long now = System.currentTimeMillis();
-		if ((bytesSent + numBytes) >= ((now - timeLastSent) * byteRate / 2000)) {
-			System.err.println("CANNOT SEND: already sent" + (now - timeLastSent) * byteRate / 1000);
-		//	couldNotSend = true;
-			return false;
-		} else {
-			bytesSent += numBytes;
-			//timeLastSent = System.currentTimeMillis();
-			System.out.println("CAN SEND");
-			return true;
-		}
-	}
 
 	/**
 	 * Constructor. Sets necessary fields.
@@ -73,14 +53,39 @@ public class UDPRequestHandler {
 	 * @param textoutput
 	 */
 	public UDPRequestHandler(UDPPacket incoming) {
+		// Create request
 		id = ++requests;
-		// Ugly quadruple conversion... easier way?
 		backendRequest = incoming;
+
+		System.out.println("\tAssigned request id " + id);
+
+		// Parse request data out
 		byte[] requestData = incoming.getData();
-		int bytesRateInt = ByteBuffer.wrap(
-				Arrays.copyOfRange(requestData, 0, 4)).getInt(); // Actually a
-																	// Byte Rate
-		byteRate = (float) bytesRateInt;
+
+		// Get byterate
+		byteRate = ByteBuffer.wrap(Arrays.copyOfRange(requestData, 0, 4))
+				.getInt();
+
+		// Set dataLength based on byterate
+		dataLength = byteRate;
+		while (dataLength > maxDataLength)
+			dataLength /= 2;
+
+		if (dataLength == 0)
+			dataLength = maxDataLength;
+
+		System.out.println("\tRequest has byteRate: " + byteRate);
+		System.out.println("\tUsing packets of size: " + dataLength);
+
+		// Get period
+		period = ByteBuffer.wrap(Arrays.copyOfRange(requestData, 4, 8))
+				.getInt();
+
+		// Get phase
+		phase = ByteBuffer.wrap(Arrays.copyOfRange(requestData, 8, 12))
+				.getInt();
+
+		// Get HTTP header
 		header = new String(Arrays.copyOfRange(requestData, 4,
 				requestData.length));
 		BufferedReader packetReader = new BufferedReader(new CharArrayReader(
@@ -94,12 +99,11 @@ public class UDPRequestHandler {
 			System.err
 					.println("Couldn't convert UDP packet request to HTTP header.");
 		}
+
+		System.out.println("\tRequested file: " + frontendRequest.getRequest());
 	}
 
 	/**
-	 * Determine what the client has requested - either a local file, a file on
-	 * one of our backend servers, or a modification to the routing table.
-	 * 
 	 * Returns the number of packets;
 	 */
 	public int initializeRequest() {
@@ -123,13 +127,22 @@ public class UDPRequestHandler {
 		return numPackets;
 	}
 
+	/**
+	 * Generates the header for a response.
+	 * 
+	 * @param target
+	 *            the requested file
+	 * @throws UnknownHostException
+	 */
 	private void generateFileHeader(File target) throws UnknownHostException {
 		// Generate and write headers to client.
 		header = HTTPResponseHeader.makeHeader(target, frontendRequest);
 	}
 
+	/**
+	 * Sends a 404 message.
+	 */
 	private void generate404Header() {
-		// Also ugly... easier way?
 		StringWriter response = new StringWriter();
 		PrintWriter responseBuffer = new PrintWriter(response);
 		HTTPResponses.send404(frontendRequest, responseBuffer);
@@ -143,6 +156,9 @@ public class UDPRequestHandler {
 	 */
 	public UDPPacket getPacket(int seqNum) {
 		// sequence number 0 is the header
+		if (seqNum == numPackets - 1) {
+			System.out.println("SENDING LAST PACKET");
+		}
 		UDPPacket packet = null;
 		if (seqNum == 0) {
 			try {
@@ -174,6 +190,42 @@ public class UDPRequestHandler {
 		return packet;
 	}
 
+	/**
+	 * Returns whether or not we can send a new packet and stay within the
+	 * bitrate limit.
+	 * 
+	 * @return
+	 */
+	public boolean canISend() {
+		if (byteRate == 0) {
+			return true;
+		}
+
+		int numBytes = dataLength;
+		if (timeLastSent == 0) {
+			timeLastSent = System.currentTimeMillis();
+			return true;
+		}
+
+		// Running average bitrate
+		long now = System.currentTimeMillis();
+		if ((bytesSent + numBytes) >= ((now - timeLastSent) * byteRate / 2000)) {
+			System.err.println("CANNOT SEND: already sent"
+					+ (now - timeLastSent) * byteRate / 2000);
+			// couldNotSend = true;
+			return false;
+		} else {
+			bytesSent += numBytes;
+			// timeLastSent = System.currentTimeMillis();
+			System.out.println("CAN SEND with br = " + byteRate);
+			return true;
+		}
+
+	}
+
+	/**
+	 * Kills the UDPRequestHandler, preventing it from sending any more packets.
+	 */
 	public void kill() {
 		if (alive) {
 			System.out.println("\tWe have slain client "
@@ -189,5 +241,13 @@ public class UDPRequestHandler {
 
 	public int getID() {
 		return id;
+	}
+
+	public int getPeriod() {
+		return period;
+	}
+
+	public int getPhase() {
+		return phase;
 	}
 }

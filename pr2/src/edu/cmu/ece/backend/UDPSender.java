@@ -1,12 +1,17 @@
 package edu.cmu.ece.backend;
 
-import java.net.DatagramPacket;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.PriorityBlockingQueue;
 
+/**
+ * Manages the sending of UDPPackets as responses to remote file requests.
+ * 
+ * @author michaels
+ * 
+ */
 public class UDPSender implements Runnable {
 	private static UDPSender instance = null;
 	private UDPManager udp = UDPManager.getInstance();
@@ -19,6 +24,11 @@ public class UDPSender implements Runnable {
 	Queue<UDPPacketSender> resendQueue = new PriorityBlockingQueue<UDPPacketSender>();
 	Map<UDPRequestHandler, Integer> clientsToBitrates = new ConcurrentHashMap<UDPRequestHandler, Integer>();
 
+	/**
+	 * Singleton class
+	 * 
+	 * @return the instance
+	 */
 	public static UDPSender getInstance() {
 		if (instance == null) {
 			instance = new UDPSender();
@@ -29,9 +39,8 @@ public class UDPSender implements Runnable {
 	private UDPSender() {
 	}
 
-	/*
-	 * This just keeps attempting to send a packet if there are any TODO: add
-	 * bandwidth limiting
+	/**
+	 * Attempts to send any extant packets.
 	 */
 	@Override
 	public void run() {
@@ -44,13 +53,14 @@ public class UDPSender implements Runnable {
 			}
 
 			UDPPacketSender sender;
+			// Prioritize resends over new packets.
 			if (!resendQueue.isEmpty() || !queue.isEmpty()) {
 				while (!resendQueue.isEmpty() || !queue.isEmpty()) {
 					if (!resendQueue.isEmpty()) {
 
 						sender = resendQueue.remove();
 						UDPRequestHandler requester = sender.getRequester();
-						if (requester.canISend(65000)) {
+						if (requester.canISend()) {
 
 							sender.send(udp);
 							// Remove from nacked - we finally responded
@@ -65,10 +75,9 @@ public class UDPSender implements Runnable {
 					else if (!queue.isEmpty()) {
 						sender = queue.remove();
 						UDPRequestHandler requester = sender.getRequester();
-						if (requester.canISend(65000)) {
 
+						if (requester.canISend()) {
 							sender.send(udp);
-
 						} else {
 							queue.add(sender);
 						}
@@ -79,8 +88,8 @@ public class UDPSender implements Runnable {
 		}
 	}
 
-	/*
-	 * Add a request to send numPackets packets to our send queue.
+	/**
+	 * Adds packets to our sendQueue.
 	 */
 	public void requestToSend(UDPRequestHandler request, int numPackets) {
 		// Create ACK/NACK lists
@@ -88,15 +97,16 @@ public class UDPSender implements Runnable {
 		nacked.put(request, new ConcurrentSkipListSet<Integer>());
 
 		// Queue up packet requests
-		for (int i = 0; i < numPackets; i++) {
+		for (int i = request.getPhase(); i < numPackets; i += request
+				.getPeriod()) {
 			UDPPacketSender sender = new UDPPacketSender(request, i, timeout, 5);
 			queue.add(sender);
 		}
 	}
 
-	/*
-	 * Allow a PacketSender to add itself back to the queue for resending. If
-	 * that packet was acked, then we don't resend it.
+	/**
+	 * Allows a UDPPacketSender to add itself back to the queue for resending.
+	 * If that packet was acked, then we don't resend it.
 	 */
 	public void requestResend(UDPPacketSender request) {
 		UDPRequestHandler requester = request.getRequester();
@@ -104,29 +114,38 @@ public class UDPSender implements Runnable {
 
 		ConcurrentSkipListSet<Integer> ackedSet = acked.get(requester);
 		if (!ackedSet.contains(seqNum)) {
-			// System.err.print(" " + seqNum + ";");
-			// System.out.println(acked.toString());
-			// Recreate requester so we can reschedule it... TimerTask is dumb
+
+			// Recreate requester so we can reschedule its TimerTask.
 			UDPPacketSender newRequest = new UDPPacketSender(requester, seqNum,
 					timeout, request.getTTL() - 1);
 			resendQueue.add(newRequest);
 		}
 	}
 
+	/**
+	 * Note that we successfully sent a packet and received the ACK.
+	 * 
+	 * @param requester
+	 *            the UDPRequestHandler in charge.
+	 * @param seqNum
+	 *            the packet that was ACKed
+	 */
 	public void ackPacket(UDPRequestHandler requester, int seqNum) {
 		ConcurrentSkipListSet<Integer> ackedSet = acked.get(requester);
 		if (ackedSet != null)
 			ackedSet.add(seqNum);
 	}
 
+	/**
+	 * Handles a NACK from the peer to which we are sending data.
+	 * 
+	 * @param requester
+	 *            the UDPRequestHandler in charge of the client
+	 * @param seqNum
+	 *            the packet that we need to resend
+	 */
 	public void nackPacket(UDPRequestHandler requester, int seqNum) {
-		if (requester == null)
-			System.out.println("REQUESTER IS NULL");
-		if (nacked == null)
-			System.out.println("NACKED IS NULL");
 		ConcurrentSkipListSet<Integer> nackedSet = nacked.get(requester);
-		if (nackedSet == null)
-			System.out.println("NACKEDSET IS NULL");
 		if (!nackedSet.contains(seqNum)) {
 			UDPPacketSender newRequest = new UDPPacketSender(requester, seqNum,
 					timeout, 5);
@@ -135,6 +154,10 @@ public class UDPSender implements Runnable {
 		}
 	}
 
+	/**
+	 * Clears the ack/nack sets for a given requester.
+	 * @param requester
+	 */
 	public void clearRequester(UDPRequestHandler requester) {
 		acked.get(requester).clear();
 		nacked.get(requester).clear();

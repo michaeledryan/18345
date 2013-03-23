@@ -1,6 +1,6 @@
 package edu.cmu.ece.backend;
 
-public class PeerData {
+public class PeerData implements Comparable<PeerData> {
 
 	private String ip;
 	private int port;
@@ -45,5 +45,15 @@ public class PeerData {
 	@Override
 	public int hashCode(){
 		return ip.hashCode() + port * client + request;
+	}
+
+	@Override
+	public int compareTo(PeerData o) {
+		if (this.equals(o))
+			return 0;
+		
+		String mine = ip + port;
+		String theirs = o.ip + o.port;
+		return mine.compareTo(theirs);
 	}
 }
