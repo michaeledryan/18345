@@ -170,6 +170,7 @@ public class HTTPClientHandler implements Runnable {
 
 		packetQueue.add(packet);
 		received.add(seqNum);
+		// Send a NACK if we don't have the packet we need. This will ensure resending.
 		if (seqNum > nextSeqNumToSend) {
 			try {
 				UDPManager.getInstance().sendPacket(

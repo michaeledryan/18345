@@ -145,11 +145,15 @@ public class HTTPRequestHandler {
 		int rate = Integer.parseInt(parameters.split("=")[1]);
 
 		router.setBitRate(clientIP, rate);
-		// TODO: figure out how to implement bitrate stuff
 
 		HTTPResponses.sendBitRateConfigMessage(rate, request, textOut);
 	}
 
+	/**
+	 * Sends a request to a remote peer for the file.
+	 * 
+	 * @param target
+	 */
 	private void handleRemoteRequest(String target) {
 		/*
 		 * Look up file in the routing table. If it isn't found, send a 404
@@ -173,37 +177,38 @@ public class HTTPRequestHandler {
 		byte[] packetData = new byte[12 + requestStringBytes.length];
 		// Add bitrate
 		System.arraycopy(
-				ByteBuffer.allocate(4)
-						.putInt(router.getClientBitRate(clientIP)).array(), 0,
-				packetData, 0, 4);
+				ByteBuffer
+						.allocate(4)
+						.putInt(router.getClientBitRate(clientIP)
+								/ peers.size()).array(), 0, packetData, 0, 4);
 		// Add data
 		System.arraycopy(requestStringBytes, 0, packetData, 12,
 				requestStringBytes.length);
 
 		// Add period
-		System.arraycopy(ByteBuffer.allocate(4).putInt(peers.size()).array(), 0,
-				packetData, 4, 4);
+		System.arraycopy(ByteBuffer.allocate(4).putInt(peers.size()).array(),
+				0, packetData, 4, 4);
 
 		// Send UDP request packet with full HTTP Header copied in to each
 		// possible server
 		int phase = 0;
-		for(PeerData remote : peers) {
+		for (PeerData remote : peers) {
 			try {
 				// Add phase offset
-				System.arraycopy(ByteBuffer.allocate(4).putInt(phase).array(), 0,
-						packetData, 8, 4);
+				System.arraycopy(ByteBuffer.allocate(4).putInt(phase).array(),
+						0, packetData, 8, 4);
 				phase++;
-				
+
 				UDPPacket backendRequest = new UDPPacket(clientID, 0,
 						remote.getIP(), remote.getPort(), packetData,
 						UDPPacketType.REQUEST, 0);
 				udp.sendPacket(backendRequest.getPacket());
-	
+
 				// Set up simple spin loop to resend the request
 				final HTTPClientHandler myHandler = handler;
 				final DatagramPacket myPacket = backendRequest.getPacket();
 				new Thread(new Runnable() {
-	
+
 					@Override
 					public void run() {
 						try {
@@ -212,7 +217,7 @@ public class HTTPRequestHandler {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
-	
+
 						if (!myHandler.getGotAck()) {
 							UDPManager.getInstance().sendPacket(myPacket);
 							this.run();
@@ -231,6 +236,10 @@ public class HTTPRequestHandler {
 		 */
 	}
 
+	/**
+	 * Handles a request for a local file.
+	 * @param target
+	 */
 	private void handleLocalRequest(File target) {
 		// Generate and write headers to client.
 		System.out.println("HTTP Request, client " + clientID);

@@ -67,8 +67,13 @@ public class UDPRequestHandler {
 				.getInt();
 
 		// Set dataLength based on byterate
-		dataLength = maxDataLength;
-		
+		dataLength = byteRate;
+		while (dataLength > maxDataLength)
+			dataLength /= 2;
+
+		if (dataLength == 0)
+			dataLength = maxDataLength;
+
 		System.out.println("\tRequest has byteRate: " + byteRate);
 		System.out.println("\tUsing packets of size: " + dataLength);
 

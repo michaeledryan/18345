@@ -6,6 +6,12 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+/**
+ * Wrapper class for our DatagramPackets.
+ * 
+ * @author michael
+ * 
+ */
 public class UDPPacket implements Comparable<UDPPacket> {
 	// Core packet elements
 	private DatagramPacket datagram;
@@ -24,7 +30,7 @@ public class UDPPacket implements Comparable<UDPPacket> {
 	private byte[] body;
 	private int dataLength; // Length of the data being sent, excluding header
 
-	// Constructor	 to parse in received packet
+	// Constructor to parse in received packet
 	public UDPPacket(DatagramPacket packet) {
 		// Get raw packet information from UDP
 		datagram = packet;
@@ -43,7 +49,25 @@ public class UDPPacket implements Comparable<UDPPacket> {
 				Arrays.copyOfRange(body, 12, 16)).getInt());
 	}
 
-	// Constructor to create new packet to send
+	/**
+	 * Constructor to create new packet to send
+	 * 
+	 * @param client
+	 *            the clientID
+	 * @param request
+	 *            the request number
+	 * @param destinationIP
+	 *            target IP
+	 * @param destinationPort
+	 *            target port
+	 * @param data
+	 *            data to be send
+	 * @param type
+	 *            type of UDPPacket
+	 * @param seqNum
+	 *            sequence number in transmission
+	 * @throws UnknownHostException
+	 */
 	public UDPPacket(int client, int request, String destinationIP,
 			int destinationPort, byte[] data, UDPPacketType type, int seqNum)
 			throws UnknownHostException {

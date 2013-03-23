@@ -7,6 +7,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.SocketException;
 
+/**
+ * Handles reading and writing of files.
+ * 
+ * @author michael
+ * 
+ */
 public class ResponseFileData {
 	private static int BUF_MAX = 1 << 10;
 	private File target;
@@ -26,12 +32,13 @@ public class ResponseFileData {
 
 	/**
 	 * Given a maximum packet size, returns the number of packets it would take
-	 * to send this file
+	 * to send this file.
+	 * 
 	 */
 	public int getNumPackets(int packetSize) {
 		int result = 0;
-		for(int i = 0; i < lowers.length; i++){
-			int segmentSize = uppers[i]-lowers[i]+1;
+		for (int i = 0; i < lowers.length; i++) {
+			int segmentSize = uppers[i] - lowers[i] + 1;
 			result += (int) Math.ceil(((float) segmentSize) / packetSize);
 		}
 		return result;
@@ -69,8 +76,7 @@ public class ResponseFileData {
 		} catch (FileNotFoundException e1) {
 			System.err.println("Couldn't find file. Should have 404'd.");
 		} catch (IOException e) {
-			System.err.println("Could not read/write file: "
-					+ e.getMessage());
+			System.err.println("Could not read/write file: " + e.getMessage());
 		}
 
 		// Write the file to the.err buffer
@@ -83,7 +89,8 @@ public class ResponseFileData {
 		} catch (IndexOutOfBoundsException e) {
 			System.err.println("Failed to copy to buffer: " + e.getMessage());
 		} catch (SocketException e) {
-		//	System.err.println("Failed to write to socket: " + e.getMessage());
+			// System.err.println("Failed to write to socket: " +
+			// e.getMessage());
 		} catch (IOException e) {
 			System.err.println("Could not read/write file: " + e.getMessage());
 		}
@@ -92,8 +99,7 @@ public class ResponseFileData {
 		try {
 			file.close();
 		} catch (IOException e) {
-			System.err.println("Could not close file: "
-					+ e.getMessage());
+			System.err.println("Could not close file: " + e.getMessage());
 		}
 	}
 
