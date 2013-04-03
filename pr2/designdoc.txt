@@ -11,6 +11,8 @@ Third: UDP Packet type, one of :
     DATA: File sent to a reqeuster
     CONFIG: Sends information about backend configuration
     ACK: Acknowledgement or received packet (not yet implemented)
+    NACK: Negative acknowledgement - sent if we are waiting on a specific packet to send it to the client. 
+    KILL: Teels the backend peer to stop sending data referenced by a specific request.
 
 
 Control flow for UDP information:
