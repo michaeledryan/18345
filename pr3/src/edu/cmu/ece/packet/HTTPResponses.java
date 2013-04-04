@@ -66,7 +66,88 @@ public class HTTPResponses {
 		out.flush();
 
 	}
-	
+
+	/**
+	 * Respond to add requests that give a UUID.
+	 * @param path
+	 * @param request
+	 * @param out
+	 * @param uuid
+	 * @param rate
+	 */
+	public static void sendPeerUUIDConfigMessage(String path,
+			HTTPRequestPacket request, PrintWriter out, String uuid, String rate) {
+		String header = "HTTP/1.1 200 OK\r\n";
+		String connection = request.getHeader("Connection");
+
+		if (connection != null && connection.equalsIgnoreCase("close"))
+			header += "Connection: Close\r\n";
+		else
+			header += "Connection: Keep-Alive\r\n";
+		header += "Date: " + HTTPResponseHeader.formatDate(new Date()) + "\r\n";
+
+		// Create simple page
+		String page = "<!doctype html><head><title>Peer configuration</title></head>"
+				+ "<body><ul> Config data: </ul><li>File path:"
+				+ path
+				+ "</li><li> Peer uuid: "
+				+ uuid
+				+ "</li><li>Peer rate: "
+				+ rate + "</li></body></html>";
+
+		// Add the page info
+		header += "Content-Type: text/html\r\n";
+		header += "Content-Length: " + page.length() + "\r\n";
+		header += "\r\n";
+
+		out.write(header);
+		out.write(page);
+		out.flush();
+
+	}
+
+	/**
+	 * Respond to addneighbor requests.
+	 * @param request
+	 * @param out
+	 * @param uuid
+	 * @param peerdata
+	 * @param frontend
+	 */
+	public static void sendAddNeighborMessage(HTTPRequestPacket request,
+			PrintWriter out, String uuid, PeerData peerdata, String frontend) {
+		String header = "HTTP/1.1 200 OK\r\n";
+		String connection = request.getHeader("Connection");
+
+		if (connection != null && connection.equalsIgnoreCase("close"))
+			header += "Connection: Close\r\n";
+		else
+			header += "Connection: Keep-Alive\r\n";
+		header += "Date: " + HTTPResponseHeader.formatDate(new Date()) + "\r\n";
+
+		// Create simple page
+		String page = "<!doctype html><head><title>Peer configuration</title></head>"
+				+ "<body><ul> Config data: </ul><li>Peer uuid:"
+				+ uuid
+				+ "</li><li> Peer hostname: "
+				+ peerdata.getIP()
+				+ "</li><li>Peer backend port: "
+				+ peerdata.getPort()
+				+ "</li><li>Peer frontend port: "
+				+ frontend
+				+ "</li></body></html>";
+
+		// Add the page info
+		header += "Content-Type: text/html\r\n";
+		header += "Content-Length: " + page.length() + "\r\n";
+		header += "\r\n";
+
+		out.write(header);
+		out.write(page);
+		out.flush();
+
+	}
+
 	public static void sendBitRateConfigMessage(int rate,
 			HTTPRequestPacket request, PrintWriter out) {
 		String header = "HTTP/1.1 200 OK\r\n";

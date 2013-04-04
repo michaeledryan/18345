@@ -13,7 +13,9 @@ public class RoutingTable {
 	private Map<Integer, HTTPClientHandler> idsToClientHandlers = new ConcurrentHashMap<Integer, HTTPClientHandler>();
 	private Map<PeerData, UDPRequestHandler> peersToRequests = new ConcurrentHashMap<PeerData, UDPRequestHandler>();
 	private Map<String, Integer> clientsToBitRates = new ConcurrentHashMap<String, Integer>();
-
+	private String uuid;
+	private String name;
+	
 	/**
 	 * Returns the instance of RoutingTable.
 	 * 
@@ -169,6 +171,16 @@ public class RoutingTable {
 	 */
 	public void removeBitRate(int clientID) {
 		clientsToBitRates.remove(new Integer(clientID));
+	}
+
+	public void setUUID(String newUUID) {
+		uuid = newUUID;
+		
+	}
+
+	public void setName(String newName) {
+		name = newName;
+		
 	}
 
 }

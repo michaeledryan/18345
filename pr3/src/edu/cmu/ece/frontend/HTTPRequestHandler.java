@@ -32,6 +32,7 @@ public class HTTPRequestHandler {
 	private PrintWriter textOut;
 	private HTTPClientHandler handler;
 
+	private static String contentPath = "content/";
 	private int clientID;
 	private String clientIP;
 
@@ -55,6 +56,16 @@ public class HTTPRequestHandler {
 	}
 
 	/**
+	 * Sets the content path to the specified path
+	 * 
+	 * @param path
+	 *            the new content path
+	 */
+	public static void setContentPath(String path) {
+		contentPath = path;
+	}
+
+	/**
 	 * Determine what the client has requested - either a local file, a file on
 	 * one of our backend servers, or a modification to the routing table
 	 */
@@ -64,6 +75,11 @@ public class HTTPRequestHandler {
 		if (requested.startsWith("/"))
 			requested = requested.substring(1);
 		if (requested.startsWith("peer/")) {
+			if (requested.startsWith("addneighbor?", 5)) {
+				addNeighbor(requested.substring(17));
+				return;
+			}
+
 			// First check if we need to add to the routing table
 			if (requested.startsWith("add?", 5)) {
 				addToRoutingTable(requested.substring(9));
@@ -90,7 +106,7 @@ public class HTTPRequestHandler {
 		}
 
 		// Otherwise, check if the file exists locally
-		String filename = "content/" + request.getRequest();
+		String filename = contentPath + request.getRequest();
 		File target = new File(filename);
 		if (target.exists()) {
 			request.parseRanges(target);
@@ -104,12 +120,51 @@ public class HTTPRequestHandler {
 		}
 	}
 
+	private void addNeighbor(String parameters) {
+		String[] paramList = parameters.split("&");
+		String uuid = "";
+		String host = "";
+		String frontend = "";
+		String backend = "";
+		String metric = "";
+
+		for (int i = 0; i < paramList.length; i++) {
+			String[] keyValue = paramList[i].split("=");
+			if (keyValue[0].equals("metric"))
+				metric = keyValue[1];
+			else if (keyValue[0].equals("host"))
+				host = keyValue[1];
+			else if (keyValue[0].equals("backend"))
+				backend = keyValue[1];
+			else if (keyValue[0].equals("frontend"))
+				frontend = keyValue[1];
+			else if (keyValue[0].equals("uuid"))
+				uuid = keyValue[1];
+		}
+
+		System.out.println("HTTP Request, client " + clientID);
+		System.out.println("\tConfig request with parameters:");
+		System.out.println("\t\tUUID: " + uuid);
+		System.out.println("\t\tPath: " + host);
+		System.out.println("\t\tBackend: " + backend);
+		System.out.println("\t\tFrontend: " + frontend);
+		System.out.println("\t\tMetric: " + metric);
+
+		PeerData peerdata = new PeerData(host, Integer.parseInt(backend),
+				Integer.parseInt(metric), 0);
+
+		HTTPResponses.sendAddNeighborMessage(request, textOut, uuid,
+				peerdata, frontend);
+
+	}
+
 	private void addToRoutingTable(String parameters) {
 		String[] paramList = parameters.split("&");
 		String path = "";
 		String host = "";
 		String port = "";
 		String rate = "";
+		String uuid = "";
 
 		for (int i = 0; i < paramList.length; i++) {
 			String[] keyValue = paramList[i].split("=");
@@ -121,18 +176,37 @@ public class HTTPRequestHandler {
 				port = keyValue[1];
 			else if (keyValue[0].equals("rate"))
 				rate = keyValue[1];
+			else if (keyValue[0].equals("peer"))
+				uuid = keyValue[1];
 		}
-		System.out.println("HTTP Request, client " + clientID);
-		System.out.println("\tConfig request with parameters:");
-		System.out.println("\t\tFile: " + path);
-		System.out.println("\t\tPath: " + host + ":" + port);
-		System.out.println("\t\tBitrate: " + rate);
 
-		PeerData peerdata = new PeerData(host, Integer.parseInt(port),
-				Integer.parseInt(rate), 0);
-		router.addtofileNames(path, peerdata);
+		if (uuid.equals("")) {
 
-		HTTPResponses.sendPeerConfigMessage(path, request, textOut, peerdata);
+			System.out.println("HTTP Request, client " + clientID);
+			System.out.println("\tConfig request with parameters:");
+			System.out.println("\t\tFile: " + path);
+			System.out.println("\t\tPath: " + host + ":" + port);
+			System.out.println("\t\tBitrate: " + rate);
+
+			PeerData peerdata = new PeerData(host, Integer.parseInt(port),
+					Integer.parseInt(rate), 0);
+			router.addtofileNames(path, peerdata);
+
+			HTTPResponses.sendPeerConfigMessage(path, request, textOut,
+					peerdata);
+
+		} else {
+			System.out.println("HTTP Request, client " + clientID);
+			System.out.println("\tConfig request with parameters:");
+			System.out.println("\t\tFile: " + path);
+			System.out.println("\t\tUUID: " + uuid);
+			System.out.println("\t\tBitrate: " + rate);
+
+			// TODO: makeSomething(path, uuid, rate). We must be able to look up
+			// by UUID
+			HTTPResponses.sendPeerUUIDConfigMessage(path, request, textOut,
+					uuid, rate);
+		}
 
 		// Adds parameters to the Routing table.
 	}
@@ -238,6 +312,7 @@ public class HTTPRequestHandler {
 
 	/**
 	 * Handles a request for a local file.
+	 * 
 	 * @param target
 	 */
 	private void handleLocalRequest(File target) {
