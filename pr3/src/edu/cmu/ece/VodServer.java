@@ -4,6 +4,7 @@ import edu.cmu.ece.backend.UDPManager;
 import edu.cmu.ece.backend.UDPSender;
 import edu.cmu.ece.frontend.HTTPServer;
 import edu.cmu.ece.frontend.ParseConf;
+import edu.cmu.ece.routing.RoutingTable;
 
 /**
  * Main class. Executes the program.
@@ -42,16 +43,14 @@ public class VodServer {
 				httpPort = parser.getFrontendPort();
 				udpPort = parser.getBackendPort();
 			}
-
-			/*
-			 * GLOBAL TODO: Global packet size - we must make sure the HTTP
-			 * packets have a max size that is less than the max packet size of
-			 * our UDP packet plus its own headers. Not sure how to do this
-			 * ~mnye
-			 */
-
 		}
 		
+		// Setup routing table with our ports
+		RoutingTable router = RoutingTable.getInstance();
+		router.setFrontendPort(httpPort);
+		router.setBackendPort(udpPort);
+
+
 		// Run servers on their own threads
 		UDPManager.setPort(udpPort);
 		HTTPServer http = new HTTPServer(httpPort);

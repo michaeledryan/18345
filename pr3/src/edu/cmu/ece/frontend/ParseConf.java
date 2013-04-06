@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import edu.cmu.ece.backend.RoutingTable;
+import edu.cmu.ece.routing.RoutingTable;
 
 /**
  * Class for parsing data from a node.conf file.
@@ -68,7 +68,7 @@ public class ParseConf {
 
 		// Generate new UUID if needed.
 		if (!hasUUID) {
-			String newUUID = UUID.randomUUID().toString();
+			UUID newUUID = UUID.randomUUID();
 			RoutingTable.getInstance().setUUID(newUUID);
 			try {
 				PrintWriter out = new PrintWriter(new BufferedWriter(
@@ -100,7 +100,7 @@ public class ParseConf {
 
 		// Set correct field based on key-value pair
 		if (key.equals("uuid")) {
-			RoutingTable.getInstance().setUUID(val);
+			RoutingTable.getInstance().setUUID(UUID.fromString(val));
 			hasUUID = true;
 			System.out.println("UUID: " + val);
 		} else if (key.equals("name")) {

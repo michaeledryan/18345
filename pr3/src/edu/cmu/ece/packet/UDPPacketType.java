@@ -12,9 +12,16 @@ package edu.cmu.ece.packet;
  * 		CONFIG:  a message to a server to modify its internal configuration
  * 		ACK/NAK: positive/negative acknowledgments of a UDP packet received
  * 		KILL:    signal a client that hung up, kills his requests
+ *      PEERING_REQUEST:
+ *      	a neighbor in the peer graph wants to know this client's TCP name
+ *          and port to negotiate a peer connection
+ *      PEERING_RESPONSE:
+ *      	a neighbor in the peer graph responds with the requester's UUID
+ *          and the responder's port for that neighbor
  */
 public enum UDPPacketType {
-	NONE(0), REQUEST(1), DATA(2), CONFIG(3), END(4), ACK(5), NAK(6), KILL(7);
+	NONE(0), REQUEST(1), DATA(2), CONFIG(3), END(4), ACK(5), NAK(6), KILL(7), PEERING_REQUEST(
+			8), PEERING_RESPONSE(9);
 	
 	private final int value;
   
@@ -38,6 +45,10 @@ public enum UDPPacketType {
 			return UDPPacketType.NAK;
 		case 7:
 			return UDPPacketType.KILL;
+		case 8:
+			return UDPPacketType.PEERING_REQUEST;
+		case 9:
+			return UDPPacketType.PEERING_RESPONSE;
 		default:
 			return UDPPacketType.NONE;
 		}

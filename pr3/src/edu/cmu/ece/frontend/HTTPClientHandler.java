@@ -11,11 +11,11 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.PriorityBlockingQueue;
 
 import edu.cmu.ece.DCException;
-import edu.cmu.ece.backend.RoutingTable;
 import edu.cmu.ece.backend.UDPManager;
 import edu.cmu.ece.packet.HTTPRequestPacket;
 import edu.cmu.ece.packet.UDPPacket;
 import edu.cmu.ece.packet.UDPPacketType;
+import edu.cmu.ece.routing.RoutingTable;
 
 /**
  * Manages a connection to a given client.

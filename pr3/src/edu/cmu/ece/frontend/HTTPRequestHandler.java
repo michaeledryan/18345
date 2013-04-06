@@ -9,7 +9,6 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 import edu.cmu.ece.backend.PeerData;
-import edu.cmu.ece.backend.RoutingTable;
 import edu.cmu.ece.backend.UDPManager;
 import edu.cmu.ece.packet.HTTPRequestPacket;
 import edu.cmu.ece.packet.HTTPResponseHeader;
@@ -17,6 +16,7 @@ import edu.cmu.ece.packet.HTTPResponses;
 import edu.cmu.ece.packet.ResponseFileData;
 import edu.cmu.ece.packet.UDPPacket;
 import edu.cmu.ece.packet.UDPPacketType;
+import edu.cmu.ece.routing.RoutingTable;
 
 /**
  * Generates a response packet to be sent back to the client.
