@@ -2,12 +2,10 @@ package edu.cmu.ece.backend;
 
 import java.net.DatagramPacket;
 import java.net.UnknownHostException;
-import java.util.UUID;
 
 import edu.cmu.ece.frontend.HTTPClientHandler;
 import edu.cmu.ece.packet.UDPPacket;
 import edu.cmu.ece.packet.UDPPacketType;
-import edu.cmu.ece.routing.Neighbor;
 import edu.cmu.ece.routing.RoutingTable;
 
 /**
@@ -108,34 +106,6 @@ public class UDPPacketHandler implements Runnable {
 			} catch (UnknownHostException e) {
 				e.printStackTrace();
 			}
-			return;
-
-		case PEERING_REQUEST:
-			String requestUuid = new String(packet.getData());
-			Neighbor requestN = router
-					.getNeighbor(UUID.fromString(requestUuid));
-
-			String response = router.getUUID() + "\n" + requestN.getInPort();
-			try {
-				UDPPacket packet = new UDPPacket(0, 0, pd.getIP(),
-						pd.getPort(), response.getBytes(),
-						UDPPacketType.PEERING_RESPONSE, 0);
-				udp.sendPacket(packet.getPacket());
-			} catch (UnknownHostException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
-			return;
-
-		case PEERING_RESPONSE:
-			String peeringResponse = new String(packet.getData());
-			String responseUuid = peeringResponse.split("\n")[0];
-			int port = Integer.parseInt(peeringResponse.split("\n")[1]);
-
-			Neighbor responseN = router.getNeighbor(UUID
-					.fromString(responseUuid));
-			responseN.receivePeering(port);
 			return;
 
 		case CONFIG:

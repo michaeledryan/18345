@@ -115,7 +115,8 @@ public class HTTPResponses {
 	 * @param frontend
 	 */
 	public static void sendAddNeighborMessage(HTTPRequestPacket request,
-			PrintWriter out, String uuid, PeerData peerdata, String frontend) {
+			PrintWriter out, String uuid, String ip, String frontend,
+			String backend) {
 		String header = "HTTP/1.1 200 OK\r\n";
 		String connection = request.getHeader("Connection");
 
@@ -130,9 +131,9 @@ public class HTTPResponses {
 				+ "<body><ul> Config data: </ul><li>Peer uuid:"
 				+ uuid
 				+ "</li><li> Peer hostname: "
-				+ peerdata.getIP()
+				+ ip
 				+ "</li><li>Peer backend port: "
-				+ peerdata.getPort()
+				+ backend
 				+ "</li><li>Peer frontend port: "
 				+ frontend
 				+ "</li></body></html>";

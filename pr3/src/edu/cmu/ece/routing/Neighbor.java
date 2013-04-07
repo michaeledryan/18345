@@ -6,16 +6,16 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.UUID;
 
 import edu.cmu.ece.backend.PeerData;
-import edu.cmu.ece.backend.UDPManager;
-import edu.cmu.ece.packet.UDPPacket;
-import edu.cmu.ece.packet.UDPPacketType;
 
-public class Neighbor implements Comparable<Neighbor> {
+public class Neighbor implements Comparable<Neighbor>, Runnable {
 	private static int nextId = 1;
+	private static int peerTimeout = 1000; // ms
+	private RoutingTable router = RoutingTable.getInstance();
 	
 	private int id;
 	private UUID uuid;
@@ -26,8 +26,6 @@ public class Neighbor implements Comparable<Neighbor> {
 	private int distance;
 	private int originalDistance;
 
-	private int inPort;
-	private int outPort;
 	private Socket connection;
 	private BufferedReader in;
 	private PrintWriter out;
@@ -43,48 +41,98 @@ public class Neighbor implements Comparable<Neighbor> {
 		backendPort = newBackendPort;
 		distance = newMetric;
 		originalDistance = distance;
-
-		inPort = RoutingTable.getInstance().getBackendPort() + id;
-		outPort = -1;
-
-		// Begin negotiating connection
-		try {
-			UDPPacket request = new UDPPacket(0, 0, host, backendPort, uuid
-					.toString().getBytes(), UDPPacketType.PEERING_REQUEST, 0);
-			requestPeering(request);
-		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		
+		//The lesser UUID establishes the connection
+		if(router.getUUID().compareTo(uuid) < 0) {
+			requestPeering();
 		}
 	}
 
 	/*
-	 * Send out a request over UDP to the client to get the port for our TCP
-	 * connection. Creates a timeout to resend.
+	 * Send a request to the frontend over TCP to set up a TCP connection
 	 */
-	public void requestPeering(UDPPacket packet) {
-		if (outPort > 0)
-			return;
-		UDPManager.getInstance().sendPacket(packet.getPacket());
+	public void requestPeering() {
+		System.out.println("Requesting peering relationship");
+		try {
+			// Connect to remote neighbor through TCP
+			connection = new Socket(InetAddress.getByName(host),
+					frontendPort);
+			in = new BufferedReader(new InputStreamReader(
+					connection.getInputStream()));
+			out = new PrintWriter(connection.getOutputStream());
 
-		new NeighborPeeringRequest(this, packet, 500);
+			// Send them our request to peer
+			String request = "GET peering_request/" + uuid + "\r\n\r\n";
+			out.print(request);
+
+			// Begin our long and beautiful relationship
+			new Thread(this).start();
+		} catch (UnknownHostException e) {
+			System.err.println("Invalid neighbor address.");
+		} catch (IOException e) {
+			System.out
+					.println("Could not read/write to socket stream for neighbors.");
+		}
 	}
 
 	/*
 	 * Receives the port for our TCP connection via the UDP response.
 	 */
-	public void receivePeering(int port) {
-		outPort = port;
+	public void receivePeering(Socket socket, BufferedReader read,
+			PrintWriter write) {
+		System.out.println("Establishing peering relationship.");
+		connection = socket;
+		in = read;
+		out = write;
+
+		// Begin our long and beautiful relationship
+		new Thread(this).start();
+	}
+
+	/*
+	 * Main run loop - listens over TCP for the neighbor to send us cool
+	 * information. If we time out on a read block, we know this neighbor has
+	 * died :(
+	 */
+	@Override
+	public void run() {
+		System.out.println("Peer loop established.");
+		// Listen until peer disconnects
+		boolean listening = true;
+		while (listening) {
+			try {
+				// Wait for incoming message
+				String message = in.readLine();
+
+				// Parse the message from our peer
+				// No updates is just a keep alive message sent periodically
+				if (message.equals("No updates")) {
+					continue;
+				} else if (message.startsWith("Updates: ")) {
+					// We have reachability updates
+					int numUpdates = Integer.parseInt(message.split(" ")[1]);
+					System.out.println("Neighbor has sent us "+numUpdates+" updates");
+
+					// TODO: parse updates
+				} else {
+					// Invalid message
+					System.err.println("Neighbor sent us invalid message.");
+				}
+
+			} catch (SocketTimeoutException e) {
+				System.err
+						.println("Neighbor hasn't reported back, may be dead.");
+				// TODO: update our graph
+			} catch (IOException e) {
+				System.err.println("Couldn't read incoming peer message.");
+			}
+		}
+
+		// Close socket and exit
 		try {
-			connection = new Socket(InetAddress.getByName(host), port,
-					InetAddress.getLocalHost(), inPort);
-			in = new BufferedReader(new InputStreamReader(
-					connection.getInputStream()));
-			out = new PrintWriter(connection.getOutputStream());
-		} catch (UnknownHostException e) {
-			System.err.println("Couldn't get specified peer address.");
+			connection.close();
 		} catch (IOException e) {
-			System.err.println("Couldn't connect to peer.");
+			System.err.println("Could not close socket to neighbor.");
 		}
 	}
 
@@ -93,10 +141,6 @@ public class Neighbor implements Comparable<Neighbor> {
 		return uuid;
 	}
 	
-	public int getInPort() {
-		return inPort;
-	}
-
 	public int getDistanceMetric() {
 		return distance;
 	}

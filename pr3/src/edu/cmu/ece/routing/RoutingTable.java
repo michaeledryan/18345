@@ -22,7 +22,6 @@ public class RoutingTable {
 	
 	private UUID myUuid;
 	private String myName;
-	private int host;
 	private int frontendPort;
 	private int backendPort;
 	
@@ -41,6 +40,7 @@ public class RoutingTable {
 	 * Private constructor for a singleton.
 	 */
 	private RoutingTable() {
+		// Do nothing!
 	}
 
 
@@ -234,6 +234,10 @@ public class RoutingTable {
 	 */
 	public Collection<Neighbor> getNeighbors() {
 		return neighbors.values();
+	}
+
+	public String getNeighborJSON() {
+		return "";
 	}
 
 	/**

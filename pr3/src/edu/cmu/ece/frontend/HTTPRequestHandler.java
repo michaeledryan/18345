@@ -1,11 +1,14 @@
 package edu.cmu.ece.frontend;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.DatagramPacket;
+import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 import edu.cmu.ece.backend.PeerData;
@@ -16,6 +19,7 @@ import edu.cmu.ece.packet.HTTPResponses;
 import edu.cmu.ece.packet.ResponseFileData;
 import edu.cmu.ece.packet.UDPPacket;
 import edu.cmu.ece.packet.UDPPacketType;
+import edu.cmu.ece.routing.Neighbor;
 import edu.cmu.ece.routing.RoutingTable;
 
 /**
@@ -28,9 +32,12 @@ public class HTTPRequestHandler {
 	private UDPManager udp = UDPManager.getInstance();
 	private RoutingTable router = RoutingTable.getInstance();
 	private HTTPRequestPacket request;
+	private HTTPClientHandler handler;
+
+	private Socket socket;
+	private BufferedReader textIn;
 	private OutputStream out;
 	private PrintWriter textOut;
-	private HTTPClientHandler handler;
 
 	private static String contentPath = "content/";
 	private int clientID;
@@ -45,14 +52,17 @@ public class HTTPRequestHandler {
 	 * @param textoutput
 	 */
 	public HTTPRequestHandler(int id, String ip, HTTPRequestPacket request,
-			OutputStream output, PrintWriter textoutput,
-			HTTPClientHandler handler) {
+			BufferedReader input, OutputStream output, PrintWriter textoutput,
+			Socket socket, HTTPClientHandler handler) {
 		this.clientID = id;
 		this.clientIP = ip;
 		this.request = request;
+		this.handler = handler;
+
+		this.socket = socket;
+		this.textIn = input;
 		this.out = output;
 		this.textOut = textoutput;
-		this.handler = handler;
 	}
 
 	/**
@@ -92,7 +102,7 @@ public class HTTPRequestHandler {
 				handlePeerConfig(requested.substring(12));
 				return;
 			}
-
+			
 			// Otherwise we have a file request... Look it up and either handle
 			// the request or response with a 404
 			String file = requested.substring(10);
@@ -103,6 +113,9 @@ public class HTTPRequestHandler {
 				HTTPResponses.send404(request, textOut);
 				return;
 			}
+		} else if (requested.startsWith("peering_request/")) {
+			String uuid = requested.split("/")[1];
+			handlePeeringRequest(UUID.fromString(uuid));
 		}
 
 		// Otherwise, check if the file exists locally
@@ -150,11 +163,13 @@ public class HTTPRequestHandler {
 		System.out.println("\t\tFrontend: " + frontend);
 		System.out.println("\t\tMetric: " + metric);
 
-		PeerData peerdata = new PeerData(host, Integer.parseInt(backend),
-				Integer.parseInt(metric), 0);
+		Neighbor n = new Neighbor(UUID.fromString(uuid), host,
+				Integer.parseInt(frontend), Integer.parseInt(backend),
+				Integer.parseInt(backend));
+		router.addNeighbor(n);
 
-		HTTPResponses.sendAddNeighborMessage(request, textOut, uuid,
-				peerdata, frontend);
+		HTTPResponses.sendAddNeighborMessage(request, textOut, uuid, host,
+				frontend, backend);
 
 	}
 
@@ -327,5 +342,14 @@ public class HTTPRequestHandler {
 
 		ResponseFileData fileData = new ResponseFileData(target, request);
 		fileData.sendFileToStream(out);
+	}
+
+	/**
+	 * Handles a peering request - gives socket to neighbor and kills thread
+	 */
+	private void handlePeeringRequest(UUID uuid) {
+		Neighbor n = router.getNeighbor(uuid);
+		n.receivePeering(socket, textIn, textOut);
+		Thread.currentThread().interrupt();
 	}
 }

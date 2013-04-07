@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.AbstractSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.PriorityBlockingQueue;
 
@@ -32,7 +33,7 @@ public class HTTPClientHandler implements Runnable {
 	private boolean gotAck = false;
 
 	private PriorityBlockingQueue<UDPPacket> packetQueue = new PriorityBlockingQueue<UDPPacket>();
-	private ConcurrentSkipListSet<Integer> received = new ConcurrentSkipListSet<Integer>();
+	private AbstractSet<Integer> received = new ConcurrentSkipListSet<Integer>();
 	private int nextSeqNumToSend;
 
 	private Socket client;
@@ -84,8 +85,8 @@ public class HTTPClientHandler implements Runnable {
 				// Parse request, send response
 				request = new HTTPRequestPacket(in);
 				HTTPRequestHandler responder = new HTTPRequestHandler(id,
-						client.getInetAddress().getHostAddress(),
-						request, out, textOut, this);
+						client.getInetAddress().getHostAddress(), request, in,
+						out, textOut, client, this);
 
 				// Clear received queue and its next element
 				nextSeqNumToSend = 0;
@@ -102,6 +103,10 @@ public class HTTPClientHandler implements Runnable {
 				String connection = request.getHeader("Connection");
 				if (connection != null && connection.equalsIgnoreCase("close"))
 					listening = false;
+
+				// Check if we need to just die
+				if (Thread.interrupted())
+					return;
 			} catch (IOException e) {
 				System.err.format(
 						"Failed to read request packet for client %d: %s\n",

@@ -20,8 +20,7 @@ package edu.cmu.ece.packet;
  *          and the responder's port for that neighbor
  */
 public enum UDPPacketType {
-	NONE(0), REQUEST(1), DATA(2), CONFIG(3), END(4), ACK(5), NAK(6), KILL(7), PEERING_REQUEST(
-			8), PEERING_RESPONSE(9);
+	NONE(0), REQUEST(1), DATA(2), CONFIG(3), END(4), ACK(5), NAK(6), KILL(7);
 	
 	private final int value;
   
@@ -45,10 +44,6 @@ public enum UDPPacketType {
 			return UDPPacketType.NAK;
 		case 7:
 			return UDPPacketType.KILL;
-		case 8:
-			return UDPPacketType.PEERING_REQUEST;
-		case 9:
-			return UDPPacketType.PEERING_RESPONSE;
 		default:
 			return UDPPacketType.NONE;
 		}
