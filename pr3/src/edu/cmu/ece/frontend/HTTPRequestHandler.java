@@ -8,8 +8,8 @@ import java.net.DatagramPacket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 import edu.cmu.ece.backend.PeerData;
 import edu.cmu.ece.backend.UDPManager;
@@ -20,6 +20,7 @@ import edu.cmu.ece.packet.ResponseFileData;
 import edu.cmu.ece.packet.UDPPacket;
 import edu.cmu.ece.packet.UDPPacketType;
 import edu.cmu.ece.routing.Neighbor;
+import edu.cmu.ece.routing.NetworkGraph;
 import edu.cmu.ece.routing.RoutingTable;
 
 /**
@@ -31,6 +32,7 @@ import edu.cmu.ece.routing.RoutingTable;
 public class HTTPRequestHandler {
 	private UDPManager udp = UDPManager.getInstance();
 	private RoutingTable router = RoutingTable.getInstance();
+	private NetworkGraph graph = NetworkGraph.getInstance();
 	private HTTPRequestPacket request;
 	private HTTPClientHandler handler;
 
@@ -166,7 +168,7 @@ public class HTTPRequestHandler {
 		Neighbor n = new Neighbor(UUID.fromString(uuid), host,
 				Integer.parseInt(frontend), Integer.parseInt(backend),
 				Integer.parseInt(backend));
-		router.addNeighbor(n);
+		graph.addNeighbor(n);
 
 		HTTPResponses.sendAddNeighborMessage(request, textOut, uuid, host,
 				frontend, backend);
@@ -254,7 +256,7 @@ public class HTTPRequestHandler {
 				+ request.getFullRangeString());
 		System.out.println("\tRequesting bitrate: "
 				+ router.getClientBitRate(clientIP));
-		ConcurrentSkipListSet<PeerData> peers = router.getPeerData(target);
+		Set<PeerData> peers = router.getPeerData(target);
 		if (peers == null || peers.size() == 0) {
 			HTTPResponses.send404(request, textOut);
 			return;
@@ -350,7 +352,7 @@ public class HTTPRequestHandler {
 	private void handlePeeringRequest(UUID uuid) {
 		System.out.println("Peering request from neighbor: " + uuid);
 
-		Neighbor n = router.getNeighbor(uuid);
+		Neighbor n = graph.getNeighbor(uuid);
 		n.receivePeering(socket, textIn, textOut);
 		Thread.currentThread().interrupt();
 	}

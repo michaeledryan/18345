@@ -1,8 +1,13 @@
 package edu.cmu.ece.routing;
 
-import java.util.AbstractSet;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -12,7 +17,7 @@ public class NetworkGraph {
 	private RoutingTable router = RoutingTable.getInstance();
 
 	private Map<UUID, Neighbor> neighbors = new ConcurrentHashMap<UUID, Neighbor>();
-	private Map<UUID, AbstractSet<Peer>> adjacencies = new ConcurrentHashMap<UUID, AbstractSet<Peer>>();
+	private Map<UUID, Set<Peer>> adjacencies = new ConcurrentHashMap<UUID, Set<Peer>>();
 	
 	// Represents the highest sequence number we have seen so far
 	private int sequenceNumber = 0;
@@ -85,7 +90,7 @@ public class NetworkGraph {
 	 * something.
 	 */
 	public boolean addAjacency(UUID node, Peer peer) {
-		AbstractSet<Peer> nodeSet;
+		Set<Peer> nodeSet;
 		boolean replaced = false;
 		;
 
@@ -112,7 +117,75 @@ public class NetworkGraph {
 	/*
 	 * Returns a set of adjacent peers to a given node
 	 */
-	public AbstractSet<Peer> getAdjacenies(UUID node) {
+	public Set<Peer> getAdjacencies(UUID node) {
 		return adjacencies.get(node);
+	}
+
+
+	/*
+	 * Gets the shortest paths to every node from this server. Uses dijkstra's.
+	 * Class GraphNode is simply a sortable pair of (UUID,cost,path).
+	 */
+	private class GraphNode implements Comparable<GraphNode> {
+		public UUID uuid;
+		public int cost;
+		public LinkedList<UUID> path;
+
+		public GraphNode(UUID uuid, int cost, LinkedList<UUID> path) {
+			this.uuid = uuid;
+			this.cost = cost;
+			this.path = path;
+		}
+
+		@Override
+		public int compareTo(GraphNode o) {
+			return cost - o.cost;
+		}
+	}
+
+	/*
+	 * Really just a pair, but Java makes me define a whole class. Thanks.
+	 */
+	public class CostPathPair {
+		public int cost;
+		public List<UUID> path;
+
+		public CostPathPair(int cost, List<UUID> path) {
+			this.cost = cost;
+			this.path = path;
+		}
+	}
+
+	public Map<UUID, CostPathPair> getShortestPaths() {
+		// Create visited set
+		Map<UUID, CostPathPair> paths = new HashMap<UUID, CostPathPair>();
+
+		// Queue for graph traversal - in cost order
+		PriorityQueue<GraphNode> q = new PriorityQueue<GraphNode>();
+		q.add(new GraphNode(router.getUUID(), 0, new LinkedList<UUID>()));
+
+		while (!q.isEmpty()) {
+			// Get a node, discard it if we saw it
+			GraphNode n = q.poll();
+			if (paths.containsKey(n.uuid))
+				continue;
+
+			// Add it to results
+			paths.put(n.uuid, new CostPathPair(n.cost, n.path));
+
+			// Follow every edge and add to queue
+			Set<Peer> edges = getAdjacencies(n.uuid);
+			for (Peer p : edges) {
+				LinkedList<UUID> path = new LinkedList<UUID>();
+				Collections.copy(path, n.path);
+				path.add(p.getUuid());
+
+				q.add(new GraphNode(p.getUuid(),
+						n.cost + p.getDistanceMetric(), path));
+			}
+		}
+
+		// Finally, return our results
+		return paths;
 	}
 }

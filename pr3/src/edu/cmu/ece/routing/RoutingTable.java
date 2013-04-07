@@ -1,7 +1,7 @@
 package edu.cmu.ece.routing;
 
-import java.util.AbstractSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -13,7 +13,7 @@ import edu.cmu.ece.frontend.HTTPClientHandler;
 public class RoutingTable {
 
 	private static RoutingTable instance = null;
-	private Map<String, AbstractSet<PeerData>> fileNamesToPeerData = new ConcurrentHashMap<String, AbstractSet<PeerData>>();
+	private Map<String, Set<PeerData>> fileNamesToPeerData = new ConcurrentHashMap<String, Set<PeerData>>();
 	private Map<Integer, HTTPClientHandler> idsToClientHandlers = new ConcurrentHashMap<Integer, HTTPClientHandler>();
 	private Map<PeerData, UDPRequestHandler> peersToRequests = new ConcurrentHashMap<PeerData, UDPRequestHandler>();
 	private Map<String, Integer> clientsToBitRates = new ConcurrentHashMap<String, Integer>();
@@ -161,7 +161,7 @@ public class RoutingTable {
 	/**
 	 * Gets PeerData given file path.
 	 */
-	public AbstractSet<PeerData> getPeerData(String path) {
+	public Set<PeerData> getPeerData(String path) {
 		return fileNamesToPeerData.get(path);
 	}
 
@@ -171,7 +171,7 @@ public class RoutingTable {
 	 */
 	public PeerData addtofileNames(String path, PeerData ip) {
 		synchronized (fileNamesToPeerData) {
-			AbstractSet<PeerData> peers;
+			Set<PeerData> peers;
 			if (fileNamesToPeerData.containsKey(path)) {
 				peers = fileNamesToPeerData.get(path);
 			} else {

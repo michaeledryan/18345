@@ -10,6 +10,7 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -138,7 +139,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					// serve route updates back to a neighbor that saw them
 					// already. Finally comes a series of UUIDs to sets of their
 					// neighbors and distances that changed
-					Collection<UUID> path;
+					List<UUID> path;
 
 					// Read every JSON line representing a neighbor and its
 					// new adjacencies. An empty line terminates the message.
@@ -194,7 +195,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	/*
 	 * Sends a keep-alive periodically to our neighbor
 	 */
-	class KeepAliveTimer extends TimerTask {
+	private class KeepAliveTimer extends TimerTask {
 		public void run() {
 			Neighbor.this.sendKeepAlive();
 		}
@@ -215,7 +216,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	 * Sends changes from this server over this neighbor connection. If this
 	 * neighbor is in the path this packet traveled, we return instead.
 	 */
-	public void sendChanges(int seqNum, Collection<UUID> path,
+	public void sendChanges(int seqNum, List<UUID> path,
 			Map<UUID, Collection<Peer>> changes) {
 		// If this neighbor is in the path, discard it
 		if (path.contains(uuid))
