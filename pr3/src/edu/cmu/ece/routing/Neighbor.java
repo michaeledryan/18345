@@ -42,7 +42,8 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		distance = newMetric;
 		originalDistance = distance;
 		
-		//The lesser UUID establishes the connection
+		// The lesser UUID establishes the connection
+		// And the greater UUID waits for it to come in
 		if(router.getUUID().compareTo(uuid) < 0) {
 			requestPeering();
 		}
@@ -113,7 +114,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					int numUpdates = Integer.parseInt(message.split(" ")[1]);
 					System.out.println("Neighbor has sent us "+numUpdates+" updates");
 
-					// TODO: parse updates
+					// TODO: parse updates into Peers
 				} else {
 					// Invalid message
 					System.err.println("Neighbor sent us invalid message.");

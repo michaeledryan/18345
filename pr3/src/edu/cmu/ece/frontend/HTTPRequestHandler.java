@@ -348,6 +348,8 @@ public class HTTPRequestHandler {
 	 * Handles a peering request - gives socket to neighbor and kills thread
 	 */
 	private void handlePeeringRequest(UUID uuid) {
+		System.out.println("Peering request from neighbor: " + uuid);
+
 		Neighbor n = router.getNeighbor(uuid);
 		n.receivePeering(socket, textIn, textOut);
 		Thread.currentThread().interrupt();

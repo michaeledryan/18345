@@ -1,6 +1,6 @@
 package edu.cmu.ece.routing;
 
-import java.util.Collection;
+import java.util.AbstractSet;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -13,12 +13,10 @@ import edu.cmu.ece.frontend.HTTPClientHandler;
 public class RoutingTable {
 
 	private static RoutingTable instance = null;
-	private Map<String, ConcurrentSkipListSet<PeerData>> fileNamesToPeerData = new ConcurrentHashMap<String, ConcurrentSkipListSet<PeerData>>();
+	private Map<String, AbstractSet<PeerData>> fileNamesToPeerData = new ConcurrentHashMap<String, AbstractSet<PeerData>>();
 	private Map<Integer, HTTPClientHandler> idsToClientHandlers = new ConcurrentHashMap<Integer, HTTPClientHandler>();
 	private Map<PeerData, UDPRequestHandler> peersToRequests = new ConcurrentHashMap<PeerData, UDPRequestHandler>();
 	private Map<String, Integer> clientsToBitRates = new ConcurrentHashMap<String, Integer>();
-	
-	private Map<UUID, Neighbor> neighbors = new ConcurrentHashMap<UUID, Neighbor>();
 	
 	private UUID myUuid;
 	private String myName;
@@ -163,7 +161,7 @@ public class RoutingTable {
 	/**
 	 * Gets PeerData given file path.
 	 */
-	public ConcurrentSkipListSet<PeerData> getPeerData(String path) {
+	public AbstractSet<PeerData> getPeerData(String path) {
 		return fileNamesToPeerData.get(path);
 	}
 
@@ -173,7 +171,7 @@ public class RoutingTable {
 	 */
 	public PeerData addtofileNames(String path, PeerData ip) {
 		synchronized (fileNamesToPeerData) {
-			ConcurrentSkipListSet<PeerData> peers;
+			AbstractSet<PeerData> peers;
 			if (fileNamesToPeerData.containsKey(path)) {
 				peers = fileNamesToPeerData.get(path);
 			} else {
@@ -220,32 +218,4 @@ public class RoutingTable {
 	public void removeBitRate(int clientID) {
 		clientsToBitRates.remove(new Integer(clientID));
 	}
-
-
-	/**
-	 * Get a neighbor by UUID
-	 */
-	public Neighbor getNeighbor(UUID u) {
-		return neighbors.get(u);
-	}
-
-	/**
-	 * Get a Collection of all our neighbors
-	 */
-	public Collection<Neighbor> getNeighbors() {
-		return neighbors.values();
-	}
-
-	public String getNeighborJSON() {
-		return "";
-	}
-
-	/**
-	 * Add a neighbor to our set of neighbors
-	 */
-	public void addNeighbor(Neighbor n) {
-		neighbors.put(n.getUuid(), n);
-	}
-
-
 }
