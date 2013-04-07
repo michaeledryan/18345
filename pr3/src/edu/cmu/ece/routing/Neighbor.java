@@ -8,6 +8,11 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.UUID;
 
 import edu.cmu.ece.backend.PeerData;
@@ -16,6 +21,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	private static int nextId = 1;
 	private static int peerTimeout = 1000; // ms
 	private RoutingTable router = RoutingTable.getInstance();
+	private NetworkGraph network = NetworkGraph.getInstance();
 	
 	private int id;
 	private UUID uuid;
@@ -29,6 +35,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	private Socket connection;
 	private BufferedReader in;
 	private PrintWriter out;
+	private Timer timer;
 
 
 	public Neighbor(UUID newUuid, String newHost, int newFrontendPort,
@@ -67,6 +74,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 			out.print(request);
 
 			// Begin our long and beautiful relationship
+			startKeepAlive();
 			new Thread(this).start();
 		} catch (UnknownHostException e) {
 			System.err.println("Invalid neighbor address.");
@@ -87,6 +95,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		out = write;
 
 		// Begin our long and beautiful relationship
+		startKeepAlive();
 		new Thread(this).start();
 	}
 
@@ -109,13 +118,55 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 				// No updates is just a keep alive message sent periodically
 				if (message.equals("No updates")) {
 					continue;
-				} else if (message.startsWith("Updates: ")) {
+				} else if (message.startsWith("Update ")) {
 					// We have reachability updates
-					int numUpdates = Integer.parseInt(message.split(" ")[1]);
-					System.out.println("Neighbor has sent us "+numUpdates+" updates");
+					int seqNum = Integer.parseInt(message.split(" ")[1]);
+					System.out
+							.println("Neighbor has sent updates with seqNum: "
+							+ seqNum);
 
-					// TODO: parse updates into Peers
-				} else {
+					// Ignore old sequence numbers. Just pull whole message to
+					// toss it
+					if (seqNum < network.getSequenceNumber()) {
+						while (!in.readLine().equals(""))
+							;
+					}
+					network.setSequenceNumber(seqNum);
+
+					// TODO: the second line should be a JSON list of nodes that
+					// this packet has traveled through, so we can choose not to
+					// serve route updates back to a neighbor that saw them
+					// already. Finally comes a series of UUIDs to sets of their
+					// neighbors and distances that changed
+					Collection<UUID> path;
+
+					// Read every JSON line representing a neighbor and its
+					// new adjacencies. An empty line terminates the message.
+					// Track changes so we can inform our neighbors
+					String line;
+					Map<UUID, Collection<Peer>> changes = new HashMap<UUID, Collection<Peer>>();
+					while (!(line = in.readLine()).equals("")) {
+						// TODO: parse JSON into collection of UUIDs to Peers
+						// Not sure what the easiest way is. Currently assuming
+						// we have some arbitrary collection of peers as a
+						// result so it doesn't matter
+						UUID uuid;
+						Collection<Peer> peers;
+						//changes.put(uuid, new Collection<Peer>());
+
+						for (Peer peer : peers) {
+							if (network.addAjacency(uuid, peer))
+								changes.get(uuid).add(peer);
+						}
+					}
+
+					// TODO: If we saw any changes, inform our neighbors.
+					// Skip any neighbor we already saw
+					for (Neighbor n : network.getNeighbors()) {
+						if (path.contains(n.getUuid()))
+							continue;
+						n.sendChanges(seqNum, path, changes);
+					}
 					// Invalid message
 					System.err.println("Neighbor sent us invalid message.");
 				}
@@ -123,7 +174,9 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 			} catch (SocketTimeoutException e) {
 				System.err
 						.println("Neighbor hasn't reported back, may be dead.");
+				timer.cancel();
 				// TODO: update our graph
+				// TODO: try to reconnect periodically?
 			} catch (IOException e) {
 				System.err.println("Couldn't read incoming peer message.");
 			}
@@ -135,6 +188,55 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		} catch (IOException e) {
 			System.err.println("Could not close socket to neighbor.");
 		}
+	}
+	
+	
+	/*
+	 * Sends a keep-alive periodically to our neighbor
+	 */
+	class KeepAliveTimer extends TimerTask {
+		public void run() {
+			Neighbor.this.sendKeepAlive();
+		}
+	}
+
+	private void startKeepAlive() {
+		timer = new Timer();
+		timer.scheduleAtFixedRate(new KeepAliveTimer(), peerTimeout,
+				peerTimeout);
+	}
+
+	private void sendKeepAlive() {
+		// Send no updates message
+		out.print("No updates\n\n");
+	}
+
+	/*
+	 * Sends changes from this server over this neighbor connection. If this
+	 * neighbor is in the path this packet traveled, we return instead.
+	 */
+	public void sendChanges(int seqNum, Collection<UUID> path,
+			Map<UUID, Collection<Peer>> changes) {
+		// If this neighbor is in the path, discard it
+		if (path.contains(uuid))
+			return;
+
+		// First send header
+		out.println("Updates " + seqNum);
+
+		// Then send path
+		// TODO: convert to JSON
+
+		// Then send set of changes
+		for (Map.Entry<UUID, Collection<Peer>> e : changes.entrySet()) {
+			// TODO: convert to JSON
+		}
+
+		// End with blank line
+		out.println("");
+
+		// TODO: reset timer? Since a change message tells us we are alive that
+		// would be okay to do
 	}
 
 

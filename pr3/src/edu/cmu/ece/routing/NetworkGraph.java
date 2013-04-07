@@ -14,6 +14,9 @@ public class NetworkGraph {
 	private Map<UUID, Neighbor> neighbors = new ConcurrentHashMap<UUID, Neighbor>();
 	private Map<UUID, AbstractSet<Peer>> adjacencies = new ConcurrentHashMap<UUID, AbstractSet<Peer>>();
 	
+	// Represents the highest sequence number we have seen so far
+	private int sequenceNumber = 0;
+
 	/**
 	 * Returns the instance of NetworkGraph.
 	 * 
@@ -31,6 +34,17 @@ public class NetworkGraph {
 	private NetworkGraph() {
 		//Add ourself to the network graph
 		adjacencies.put(router.getUUID(), new ConcurrentSkipListSet<Peer>());
+	}
+
+	/**
+	 * Get and set sequence number
+	 */
+	public int getSequenceNumber() {
+		return sequenceNumber;
+	}
+
+	public void setSequenceNumber(int sequenceNumber) {
+		this.sequenceNumber = sequenceNumber;
 	}
 
 	/**
@@ -66,25 +80,32 @@ public class NetworkGraph {
 
 	/*
 	 * Given a node and a peer it has as a neighbor, we need to update our
-	 * adjaceny graph. Replaces any node's neighbor with the new peer so as to
+	 * adjacency graph. Replaces any node's neighbor with the new peer so as to
 	 * make maintaining distances easy. Returns true if we have replaced
 	 * something.
 	 */
 	public boolean addAjacency(UUID node, Peer peer) {
 		AbstractSet<Peer> nodeSet;
-		boolean replaced;
+		boolean replaced = false;
+		;
 
 		if (adjacencies.containsKey(node)) {
 			nodeSet = adjacencies.get(node);
-			replaced = nodeSet.contains(peer);
+
+			// If this peer is already in the graph, remove it so we can read it
+			// with the new distance metric
+			if (nodeSet.contains(peer)) {
+				nodeSet.remove(peer);
+				replaced = true;
+			}
+
+			nodeSet.add(peer);
 		} else {
 			nodeSet = new ConcurrentSkipListSet<Peer>();
+			nodeSet.add(peer);
 			adjacencies.put(node, nodeSet);
-			replaced = false;
 		}
 
-		// Add and return
-		nodeSet.add(peer);
 		return replaced;
 	}
 
