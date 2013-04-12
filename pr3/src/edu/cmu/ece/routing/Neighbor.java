@@ -5,14 +5,18 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.lang.reflect.Type;
+import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
@@ -53,39 +57,52 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		backendPort = newBackendPort;
 		distance = newMetric;
 		originalDistance = distance;
-		
-		// The lesser UUID establishes the connection
-		// And the greater UUID waits for it to come in
-		if(network.getUUID().compareTo(uuid) < 0) {
-			requestPeering();
-		}
+
+		// Start main loop
+		new Thread(this).start();
 	}
 
 	/*
-	 * Send a request to the frontend over TCP to set up a TCP connection
+	 * Send a request to the frontend over TCP to set up a TCP connection. Only
+	 * the lesser UUID requests a connection
 	 */
 	public void requestPeering() {
-		System.out.println("Requesting peering relationship");
-		try {
-			// Connect to remote neighbor through TCP
-			connection = new Socket(InetAddress.getByName(host),
-					frontendPort);
-			in = new BufferedReader(new InputStreamReader(
-					connection.getInputStream()));
-			out = new PrintWriter(connection.getOutputStream());
+		System.out.println("Requesting peering relationship with: " + uuid);
 
-			// Send them our request to peer
-			String request = "GET peering_request/" + uuid + "\r\n\r\n";
-			out.print(request);
+		boolean connected = false;
+		while (!connected) {
+			try {
+				// Connect to remote neighbor through TCP
+				connection = new Socket(InetAddress.getByName(host),
+						frontendPort);
+				in = new BufferedReader(new InputStreamReader(
+						connection.getInputStream()));
+				out = new PrintWriter(connection.getOutputStream());
 
-			// Begin our long and beautiful relationship
-			startKeepAlive();
-			new Thread(this).start();
-		} catch (UnknownHostException e) {
-			System.err.println("Invalid neighbor address.");
-		} catch (IOException e) {
-			System.out
-					.println("Could not read/write to socket stream for neighbors.");
+				// Send them our request to peer
+				String request = "GET peering_request/" + network.getUUID()
+						+ " HTTP/1.1\r\n\r\n";
+				out.print(request);
+				out.flush();
+
+				// Begin our long and beautiful relationship
+				connected = true;
+			} catch (UnknownHostException e) {
+				System.err.println("Invalid neighbor address.");
+			} catch (ConnectException e) {
+				// Do nothing but retry to connect after a delay
+				System.out.println("Couldn't find. Waiting...");
+				try {
+					Thread.sleep(10000);
+				} catch (InterruptedException e1) {
+					// Do nothing
+				}
+				System.out.println("Trying again...");
+			} catch (IOException e) {
+				System.err
+						.println("Could not read/write to socket stream for neighbors.");
+				System.err.println(e);
+			}
 		}
 	}
 
@@ -94,13 +111,12 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	 */
 	public void receivePeering(Socket socket, BufferedReader read,
 			PrintWriter write) {
-		System.out.println("Establishing peering relationship.");
+		System.out.println("\tEstablishing peering relationship.");
 		connection = socket;
 		in = read;
 		out = write;
 
 		// Begin our long and beautiful relationship
-		startKeepAlive();
 		new Thread(this).start();
 	}
 
@@ -111,19 +127,45 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	 */
 	@Override
 	public void run() {
-		System.out.println("Peer loop established.");
+		// Wait for connection to be set up if we are subordinate
+		if (network.getUUID().compareTo(uuid) > 0 && connection == null)
+			return;
+
+		// Set up connection if we are superior
+		if (network.getUUID().compareTo(uuid) < 0)
+			requestPeering();
+
+		// Configure connection
+		System.out.println("\tPeer connection established.");
+		startKeepAlive();
+		try {
+			connection.setSoTimeout(peerTimeout);
+		} catch (SocketException e1) {
+			e1.printStackTrace();
+		}
+
+		// Send first changes
+		List<UUID> firstPath = new ArrayList<UUID>();
+		firstPath.add(network.getUUID());
+		sendChanges(network.getSequenceNumber(), firstPath,
+				network.getAllNeighbors());
+
 		// Listen until peer disconnects
 		boolean listening = true;
 		while (listening) {
 			try {
 				// Wait for incoming message
 				String message = in.readLine();
+				System.out.println(message);
 
 				// Parse the message from our peer
 				// No updates is just a keep alive message sent periodically
-				if (message.equals("No updates")) {
+				if (message == null) {
+					listening = false;
+					break;
+				} else if (message.equals("No updates")) {
 					continue;
-				} else if (message.startsWith("Update ")) {
+				} else if (message.startsWith("Updates ")) {
 					// We have reachability updates
 					int seqNum = Integer.parseInt(message.split(" ")[1]);
 					System.out
@@ -139,29 +181,32 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					network.setSequenceNumber(seqNum);
 
 
-					
-					String pathLine = in.readLine();
+					// Prep JSON
 					Gson gson = new Gson();
-					Type collType = new TypeToken<List<UUID>>(){}.getClass();
+					Type pathType = new TypeToken<ArrayList<UUID>>() {
+					}.getClass();
+					Type mapType = new TypeToken<HashMap<UUID, HashSet<Peer>>>() {
+					}.getClass();
 
-					List<UUID> path = gson.fromJson(pathLine, collType); 
+					// Read in path
+					String pathLine = in.readLine();
+					List<UUID> path = gson.fromJson(pathLine, pathType);
+					System.out.println(path);
 
-					// Read every JSON line representing a neighbor and its
-					// new adjacencies. An empty line terminates the message.
-					// Track changes so we can inform our neighbors
-					String line;
-					Map<UUID, Collection<Peer>> changes = new HashMap<UUID, Collection<Peer>>();
-					line = in.readLine();
+					// Read in the map
+					Map<UUID, Set<Peer>> changes = new HashMap<UUID, Set<Peer>>();
+					String line = in.readLine();
+					System.out.println(line);
 						
-						collType = new TypeToken<HashMap<UUID, Collection<Peer>>>(){}.getClass();
-						changes = gson.fromJson(line, collType);
-						
-						for (UUID uuid : changes.keySet()) {
-							for (Peer peer : changes.get(uuid)) {
-								if (network.addAjacency(uuid, peer))
-									changes.get(uuid).add(peer);
-							}
+					Map<UUID, Set<Peer>> updates = gson.fromJson(line, mapType);
+					System.out.println(updates);
+
+					for (UUID uuid : updates.keySet()) {
+						for (Peer peer : updates.get(uuid)) {
+							if (network.addAjacency(uuid, peer))
+								changes.get(uuid).add(peer);
 						}
+					}
 
 						
 					// TODO: If we saw any changes, inform our neighbors.
@@ -169,7 +214,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					for (Neighbor n : network.getNeighbors()) {
 						if (path.contains(n.getUuid()))
 							continue;
-						n.sendChanges(seqNum, path, changes);
+						n.sendChanges(seqNum + 1, path, changes);
 					}
 					// Invalid message
 					System.err.println("Neighbor sent us invalid message.");
@@ -179,6 +224,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 				System.err
 						.println("Neighbor hasn't reported back, may be dead.");
 				timer.cancel();
+				break;
 				// TODO: update our graph - how do we do that?
 				// TODO: try to reconnect periodically?
 			} catch (IOException e) {
@@ -188,6 +234,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 		// Close socket and exit
 		try {
+			System.out.println("Disconnecting from neighbor.");
 			connection.close();
 		} catch (IOException e) {
 			System.err.println("Could not close socket to neighbor.");
@@ -196,7 +243,8 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	
 	
 	/*
-	 * Sends a keep-alive periodically to our neighbor
+	 * Sends a keep-alive periodically to our neighbor Send at 1/3 the timeout
+	 * so we have to miss two in a row
 	 */
 	private class KeepAliveTimer extends TimerTask {
 		public void run() {
@@ -206,13 +254,14 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 	private void startKeepAlive() {
 		timer = new Timer();
-		timer.scheduleAtFixedRate(new KeepAliveTimer(), peerTimeout,
-				peerTimeout);
+		timer.scheduleAtFixedRate(new KeepAliveTimer(), peerTimeout / 3,
+				peerTimeout / 3);
 	}
 
 	private void sendKeepAlive() {
 		// Send no updates message
-		out.print("No updates\n\n");
+		out.print("No updates\r\n\r\n");
+		out.flush();
 	}
 
 	/*
@@ -220,7 +269,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	 * neighbor is in the path this packet traveled, we return instead.
 	 */
 	public void sendChanges(int seqNum, List<UUID> path,
-			Map<UUID, Collection<Peer>> changes) {
+			Map<UUID, Set<Peer>> changes) {
 		// If this neighbor is in the path, discard it
 		if (path.contains(uuid))
 			return;
@@ -239,6 +288,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 		// End with blank line
 		out.println("");
+		out.flush();
 
 		// TODO: reset timer? Since a change message tells us we are alive that
 		// would be okay to do

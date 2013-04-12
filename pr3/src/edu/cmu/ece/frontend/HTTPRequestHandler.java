@@ -128,6 +128,7 @@ public class HTTPRequestHandler {
 		} else if (requested.startsWith("peering_request/")) {
 			String uuid = requested.split("/")[1];
 			handlePeeringRequest(UUID.fromString(uuid));
+			return;
 		}
 
 		// Otherwise, check if the file exists locally
@@ -364,8 +365,17 @@ public class HTTPRequestHandler {
 	private void handlePeeringRequest(UUID uuid) {
 		System.out.println("Peering request from neighbor: " + uuid);
 
+		// Get the requesting neighbor from our table and peer
 		Neighbor n = graph.getNeighbor(uuid);
-		n.receivePeering(socket, textIn, textOut);
+		if (n == null) {
+			System.err
+					.println("\tThe requesting neighbor is not in our table.");
+		} else {
+			n.receivePeering(socket, textIn, textOut);
+		}
+
+		// Kill this thread - this socket has been passed to the neighbor's
+		// own thread
 		Thread.currentThread().interrupt();
 	}
 }

@@ -118,8 +118,13 @@ public class NetworkGraph {
 	public Collection<Neighbor> getNeighbors() {
 		return neighbors.values();
 	}
-
 	
+	/**
+	 * Get all neighbors
+	 */
+	public Map<UUID, Set<Peer>> getAllNeighbors() {
+		return adjacencies;
+	}
 	
 	
 	/**

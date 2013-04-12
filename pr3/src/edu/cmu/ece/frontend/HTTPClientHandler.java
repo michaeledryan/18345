@@ -68,7 +68,7 @@ public class HTTPClientHandler implements Runnable {
 		if(!router.bitRateSet(ip))
 			router.setBitRate(ip, 0);
 
-		System.out.println("\tClient: "
+		System.out.println("HTTP Client: "
 				+ incoming.getInetAddress().getHostAddress() + ":"
 				+ incoming.getPort());
 	}
@@ -87,7 +87,6 @@ public class HTTPClientHandler implements Runnable {
 				HTTPRequestHandler responder = new HTTPRequestHandler(id,
 						client.getInetAddress().getHostAddress(), request, in,
 						out, textOut, client, this);
-
 				// Clear received queue and its next element
 				nextSeqNumToSend = 0;
 				received.clear();

@@ -5,7 +5,6 @@ import edu.cmu.ece.backend.UDPSender;
 import edu.cmu.ece.frontend.HTTPServer;
 import edu.cmu.ece.frontend.ParseConf;
 import edu.cmu.ece.routing.NetworkGraph;
-import edu.cmu.ece.routing.RoutingTable;
 
 /**
  * Main class. Executes the program.

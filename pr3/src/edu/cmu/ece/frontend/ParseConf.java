@@ -14,7 +14,6 @@ import java.util.UUID;
 
 import edu.cmu.ece.routing.Neighbor;
 import edu.cmu.ece.routing.NetworkGraph;
-import edu.cmu.ece.routing.RoutingTable;
 
 /**
  * Class for parsing data from a node.conf file.

@@ -25,7 +25,6 @@ public class HTTPRequestPacket {
 
 	public HTTPRequestPacket(BufferedReader packet) throws DCException,
 			IOException {
-
 		// First parse the header line to get the request
 		String line = packet.readLine();
 

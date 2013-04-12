@@ -3,8 +3,6 @@ package edu.cmu.ece.packet;
 import java.io.PrintWriter;
 import java.util.Date;
 
-import com.google.gson.Gson;
-
 import edu.cmu.ece.backend.PeerData;
 import edu.cmu.ece.routing.NetworkGraph;
 
@@ -213,8 +211,6 @@ public class HTTPResponses {
 			header += "Connection: Keep-Alive\r\n";
 		header += "Date: " + HTTPResponseHeader.formatDate(new Date()) + "\r\n";
 
-		Gson gson = new Gson();
-		
 		String page = NetworkGraph.getInstance().getNeighborJSONforWeb();
 		
 		header += "Content-Type: text/html\r\n";
