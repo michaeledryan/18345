@@ -13,10 +13,8 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
@@ -130,9 +128,8 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		// Wait for connection to be set up if we are subordinate
 		if (network.getUUID().compareTo(uuid) > 0 && connection == null)
 			return;
-
 		// Set up connection if we are superior
-		if (network.getUUID().compareTo(uuid) < 0)
+		else if (network.getUUID().compareTo(uuid) < 0)
 			requestPeering();
 
 		// Configure connection
@@ -156,7 +153,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 			try {
 				// Wait for incoming message
 				String message = in.readLine();
-				System.out.println(message);
 
 				// Parse the message from our peer
 				// No updates is just a keep alive message sent periodically
@@ -164,6 +160,8 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					listening = false;
 					break;
 				} else if (message.equals("No updates")) {
+					// Flush blank line
+					in.readLine();
 					continue;
 				} else if (message.startsWith("Updates ")) {
 					// We have reachability updates
@@ -184,42 +182,50 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					// Prep JSON
 					Gson gson = new Gson();
 					Type pathType = new TypeToken<ArrayList<UUID>>() {
-					}.getClass();
-					Type mapType = new TypeToken<HashMap<UUID, HashSet<Peer>>>() {
-					}.getClass();
+					}.getType();
+					Type mapType = new TypeToken<HashMap<UUID, HashMap<UUID, Integer>>>() {
+					}.getType();
 
-					// Read in path
+					// Read in path and map
 					String pathLine = in.readLine();
+					String mapLine = in.readLine();
 					List<UUID> path = gson.fromJson(pathLine, pathType);
-					System.out.println(path);
+					Map<UUID, Map<UUID, Integer>> updates = gson.fromJson(
+							mapLine, mapType);
 
-					// Read in the map
-					Map<UUID, Set<Peer>> changes = new HashMap<UUID, Set<Peer>>();
-					String line = in.readLine();
-					System.out.println(line);
-						
-					Map<UUID, Set<Peer>> updates = gson.fromJson(line, mapType);
-					System.out.println(updates);
+					// Check JSON parsing
+					if (path == null || updates == null)
+						throw new IOException("Invalid JSON.");
 
+					// Push map to the table. Keep track of new changes to send
+					Map<UUID, Map<UUID, Integer>> changes = new HashMap<UUID, Map<UUID, Integer>>();
 					for (UUID uuid : updates.keySet()) {
-						for (Peer peer : updates.get(uuid)) {
-							if (network.addAjacency(uuid, peer))
-								changes.get(uuid).add(peer);
+						for (Map.Entry<UUID, Integer> peer : updates.get(uuid)
+								.entrySet()) {
+							// If the network graph changed...
+							if (network.addAjacency(uuid, peer.getKey(),
+									peer.getValue()))
+								// Create if necessary
+								if (!changes.containsKey(uuid))
+									changes.put(uuid,
+											new HashMap<UUID, Integer>());
+								changes.get(uuid).put(peer.getKey(),
+										peer.getValue());
 						}
 					}
 
 						
-					// TODO: If we saw any changes, inform our neighbors.
-					// Skip any neighbor we already saw
+					// If we saw any changes, inform our neighbors.
+					if (changes.isEmpty())
+						return;
 					for (Neighbor n : network.getNeighbors()) {
-						if (path.contains(n.getUuid()))
-							continue;
-						n.sendChanges(seqNum + 1, path, changes);
+						n.sendChanges(seqNum, path, changes);
 					}
+				} else {
 					// Invalid message
-					System.err.println("Neighbor sent us invalid message.");
+					System.err.println("Neighbor sent us invalid message: '"
+							+ message + "'");
 				}
-
 			} catch (SocketTimeoutException e) {
 				System.err
 						.println("Neighbor hasn't reported back, may be dead.");
@@ -228,7 +234,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 				// TODO: update our graph - how do we do that?
 				// TODO: try to reconnect periodically?
 			} catch (IOException e) {
-				System.err.println("Couldn't read incoming peer message.");
+				System.err.println("Couldn't read incoming peer message: " + e);
 			}
 		}
 
@@ -236,9 +242,13 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		try {
 			System.out.println("Disconnecting from neighbor.");
 			connection.close();
+			connection = null;
 		} catch (IOException e) {
 			System.err.println("Could not close socket to neighbor.");
 		}
+
+		// Retry
+		run();
 	}
 	
 	
@@ -269,25 +279,20 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	 * neighbor is in the path this packet traveled, we return instead.
 	 */
 	public void sendChanges(int seqNum, List<UUID> path,
-			Map<UUID, Set<Peer>> changes) {
+			Map<UUID, Map<UUID, Integer>> changes) {
 		// If this neighbor is in the path, discard it
 		if (path.contains(uuid))
 			return;
 
-		// First send header
-		out.println("Updates " + seqNum);
-
-		// Then send path
-		// TODO: convert to JSON
+		// Convert to JSON
 		Gson gson = new Gson();
 		String JSONpath = gson.toJson(path);
+		String JSONchanges = gson.toJson(changes);
 		
-		out.println(JSONpath);
-		
-		out.println(gson.toJson(changes));
-
-		// End with blank line
-		out.println("");
+		// Write out
+		out.print("Updates " + seqNum + "\r\n");
+		out.print(JSONpath + "\r\n");
+		out.print(JSONchanges + "\r\n");
 		out.flush();
 
 		// TODO: reset timer? Since a change message tells us we are alive that

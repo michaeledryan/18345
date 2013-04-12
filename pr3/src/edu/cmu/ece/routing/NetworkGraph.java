@@ -8,10 +8,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 import com.google.gson.Gson;
 
@@ -20,7 +18,7 @@ public class NetworkGraph {
 	private RoutingTable router = RoutingTable.getInstance();
 
 	private Map<UUID, Neighbor> neighbors = new ConcurrentHashMap<UUID, Neighbor>();
-	private Map<UUID, Set<Peer>> adjacencies = new ConcurrentHashMap<UUID, Set<Peer>>();
+	private Map<UUID, Map<UUID, Integer>> adjacencies = new ConcurrentHashMap<UUID, Map<UUID, Integer>>();
 
 	// Represents the highest sequence number we have seen so far
 	private int sequenceNumber = 0;
@@ -72,7 +70,7 @@ public class NetworkGraph {
 
 	public void setUUID(UUID newUUID) {
 		myUUID = newUUID;
-		adjacencies.put(myUUID, new ConcurrentSkipListSet<Peer>());
+		adjacencies.put(myUUID, new HashMap<UUID, Integer>());
 	}
 
 	public void setName(String newName) {
@@ -122,7 +120,7 @@ public class NetworkGraph {
 	/**
 	 * Get all neighbors
 	 */
-	public Map<UUID, Set<Peer>> getAllNeighbors() {
+	public Map<UUID, Map<UUID, Integer>> getAllNeighbors() {
 		return adjacencies;
 	}
 	
@@ -149,45 +147,36 @@ public class NetworkGraph {
 		neighbors.put(n.getUuid(), n);
 
 		// Also add neighbor to network graph
-		Peer p = new Peer(n.getUuid(), n.getDistanceMetric());
-		adjacencies.get(myUUID).add(p);
+		adjacencies.get(myUUID).put(n.getUuid(), n.getDistanceMetric());
 	}
 
 	/*
 	 * Given a node and a peer it has as a neighbor, we need to update our
 	 * adjacency graph. Replaces any node's neighbor with the new peer so as to
-	 * make maintaining distances easy. Returns true if we have replaced
-	 * something.
+	 * make maintaining distances easy. Returns true if we have changed
 	 */
-	public boolean addAjacency(UUID node, Peer peer) {
-		Set<Peer> nodeSet;
-		boolean replaced = false;
-		;
+	public boolean addAjacency(UUID node, UUID edge, int distance) {
+		Map<UUID, Integer> nodeMap;
+		boolean changes = true;
 
 		if (adjacencies.containsKey(node)) {
-			nodeSet = adjacencies.get(node);
+			nodeMap = adjacencies.get(node);
+			int old = nodeMap.put(edge, distance);
 
-			// If this peer is already in the graph, remove it so we can read it
-			// with the new distance metric
-			if (nodeSet.contains(peer)) {
-				nodeSet.remove(peer);
-				replaced = true;
-			}
-
-			nodeSet.add(peer);
+			changes = (old != distance);
 		} else {
-			nodeSet = new ConcurrentSkipListSet<Peer>();
-			nodeSet.add(peer);
-			adjacencies.put(node, nodeSet);
+			nodeMap = new HashMap<UUID, Integer>();
+			nodeMap.put(edge, distance);
+			adjacencies.put(node, nodeMap);
 		}
 
-		return replaced;
+		return true;
 	}
 
 	/*
 	 * Returns a set of adjacent peers to a given node
 	 */
-	public Set<Peer> getAdjacencies(UUID node) {
+	public Map<UUID, Integer> getAdjacencies(UUID node) {
 		return adjacencies.get(node);
 	}
 
@@ -243,14 +232,13 @@ public class NetworkGraph {
 			paths.put(n.uuid, new CostPathPair(n.cost, n.path));
 
 			// Follow every edge and add to queue
-			Set<Peer> edges = getAdjacencies(n.uuid);
-			for (Peer p : edges) {
+			Map<UUID, Integer> edges = getAdjacencies(n.uuid);
+			for (Map.Entry<UUID, Integer> p : edges.entrySet()) {
 				LinkedList<UUID> path = new LinkedList<UUID>();
 				Collections.copy(path, n.path);
-				path.add(p.getUuid());
+				path.add(p.getKey());
 
-				q.add(new GraphNode(p.getUuid(),
-						n.cost + p.getDistanceMetric(), path));
+				q.add(new GraphNode(p.getKey(), n.cost + p.getValue(), path));
 			}
 		}
 
