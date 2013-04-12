@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.lang.reflect.Type;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -15,6 +16,9 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import edu.cmu.ece.backend.PeerData;
 
@@ -52,7 +56,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		
 		// The lesser UUID establishes the connection
 		// And the greater UUID waits for it to come in
-		if(router.getUUID().compareTo(uuid) < 0) {
+		if(network.getUUID().compareTo(uuid) < 0) {
 			requestPeering();
 		}
 	}
@@ -134,33 +138,32 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					}
 					network.setSequenceNumber(seqNum);
 
-					// TODO: the second line should be a JSON list of nodes that
-					// this packet has traveled through, so we can choose not to
-					// serve route updates back to a neighbor that saw them
-					// already. Finally comes a series of UUIDs to sets of their
-					// neighbors and distances that changed
-					List<UUID> path;
+
+					
+					String pathLine = in.readLine();
+					Gson gson = new Gson();
+					Type collType = new TypeToken<List<UUID>>(){}.getClass();
+
+					List<UUID> path = gson.fromJson(pathLine, collType); 
 
 					// Read every JSON line representing a neighbor and its
 					// new adjacencies. An empty line terminates the message.
 					// Track changes so we can inform our neighbors
 					String line;
 					Map<UUID, Collection<Peer>> changes = new HashMap<UUID, Collection<Peer>>();
-					while (!(line = in.readLine()).equals("")) {
-						// TODO: parse JSON into collection of UUIDs to Peers
-						// Not sure what the easiest way is. Currently assuming
-						// we have some arbitrary collection of peers as a
-						// result so it doesn't matter
-						UUID uuid;
-						Collection<Peer> peers;
-						//changes.put(uuid, new Collection<Peer>());
-
-						for (Peer peer : peers) {
-							if (network.addAjacency(uuid, peer))
-								changes.get(uuid).add(peer);
+					line = in.readLine();
+						
+						collType = new TypeToken<HashMap<UUID, Collection<Peer>>>(){}.getClass();
+						changes = gson.fromJson(line, collType);
+						
+						for (UUID uuid : changes.keySet()) {
+							for (Peer peer : changes.get(uuid)) {
+								if (network.addAjacency(uuid, peer))
+									changes.get(uuid).add(peer);
+							}
 						}
-					}
 
+						
 					// TODO: If we saw any changes, inform our neighbors.
 					// Skip any neighbor we already saw
 					for (Neighbor n : network.getNeighbors()) {
@@ -176,7 +179,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 				System.err
 						.println("Neighbor hasn't reported back, may be dead.");
 				timer.cancel();
-				// TODO: update our graph
+				// TODO: update our graph - how do we do that?
 				// TODO: try to reconnect periodically?
 			} catch (IOException e) {
 				System.err.println("Couldn't read incoming peer message.");
@@ -227,11 +230,12 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 		// Then send path
 		// TODO: convert to JSON
-
-		// Then send set of changes
-		for (Map.Entry<UUID, Collection<Peer>> e : changes.entrySet()) {
-			// TODO: convert to JSON
-		}
+		Gson gson = new Gson();
+		String JSONpath = gson.toJson(path);
+		
+		out.println(JSONpath);
+		
+		out.println(gson.toJson(changes));
 
 		// End with blank line
 		out.println("");
@@ -256,6 +260,16 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		return new PeerData(host, frontendPort, backendPort, 0);
 	}
 
+	public Map<String, String> getJSONMap() {
+		Map<String, String> result = new HashMap<String, String>();
+		result.put("uuid", uuid.toString());
+		result.put("name", name);
+		result.put("host", host);
+		result.put("frontend", Integer.toString(frontendPort));
+		result.put("backend", Integer.toString(backendPort));
+		result.put("metric", Integer.toString(distance));
+		return result;
+	}
 
 	@Override
 	public int compareTo(Neighbor o) {

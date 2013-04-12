@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import edu.cmu.ece.routing.Neighbor;
+import edu.cmu.ece.routing.NetworkGraph;
 import edu.cmu.ece.routing.RoutingTable;
 
 /**
@@ -69,7 +71,7 @@ public class ParseConf {
 		// Generate new UUID if needed.
 		if (!hasUUID) {
 			UUID newUUID = UUID.randomUUID();
-			RoutingTable.getInstance().setUUID(newUUID);
+			NetworkGraph.getInstance().setUUID(newUUID);
 			try {
 				PrintWriter out = new PrintWriter(new BufferedWriter(
 						new FileWriter(targetName, true)));
@@ -100,12 +102,12 @@ public class ParseConf {
 
 		// Set correct field based on key-value pair
 		if (key.equals("uuid")) {
-			RoutingTable.getInstance().setUUID(UUID.fromString(val));
+			NetworkGraph.getInstance().setUUID(UUID.fromString(val));
 			hasUUID = true;
 			System.out.println("UUID: " + val);
 		} else if (key.equals("name")) {
 			name = val;
-			RoutingTable.getInstance().setName(val);
+			NetworkGraph.getInstance().setName(val);
 			System.out.println("name: " + val);
 		} else if (key.equals("frontend_port")) {
 			frontendPort = Integer.parseInt(val);
@@ -127,14 +129,17 @@ public class ParseConf {
 				System.exit(1);
 			}
 
-			String UUID = peerInfo[0];
+			String uuid = peerInfo[0];
 			String hostname = peerInfo[1];
 			int peerFrontPort = Integer.parseInt(peerInfo[2]);
 			int peerBackPort = Integer.parseInt(peerInfo[3]);
 			int peerMetric = Integer.parseInt(peerInfo[4]);
+			
+			NetworkGraph.getInstance().addNeighbor(new Neighbor(UUID.fromString(uuid), 
+					hostname, peerFrontPort, peerBackPort, peerMetric));
 
 			System.out.println("Peer with:");
-			System.out.println("UUID: " + UUID);
+			System.out.println("UUID: " + uuid);
 			System.out.println("hostname: " + hostname);
 			System.out.println("frontPort: " + peerFrontPort);
 			System.out.println("backPort: " + peerBackPort);
@@ -142,7 +147,6 @@ public class ParseConf {
 
 		}
 	}
-
 
 	public int getBackendPort() {
 		return backendPort;

@@ -18,11 +18,7 @@ public class RoutingTable {
 	private Map<PeerData, UDPRequestHandler> peersToRequests = new ConcurrentHashMap<PeerData, UDPRequestHandler>();
 	private Map<String, Integer> clientsToBitRates = new ConcurrentHashMap<String, Integer>();
 	
-	private UUID myUuid;
-	private String myName;
-	private int frontendPort;
-	private int backendPort;
-	
+		
 	/**
 	 * Returns the instance of RoutingTable.
 	 * 
@@ -40,43 +36,6 @@ public class RoutingTable {
 	private RoutingTable() {
 		// Do nothing!
 	}
-
-
-	/**
-	 * Get/set this server's properties
-	 */
-	public UUID getUUID() {
-		return myUuid;
-	}
-
-	public int getFrontendPort() {
-		return frontendPort;
-	}
-
-	public int getBackendPort() {
-		return backendPort;
-	}
-
-	public String getName() {
-		return myName;
-	}
-
-	public void setUUID(UUID newUUID) {
-		myUuid = newUUID;
-	}
-
-	public void setName(String newName) {
-		myName = newName;
-	}
-
-	public void setFrontendPort(int frontendPort) {
-		this.frontendPort = frontendPort;
-	}
-
-	public void setBackendPort(int backendPort) {
-		this.backendPort = backendPort;
-	}
-
 
 	/**
 	 * Checks if a given PeerData is in the table.

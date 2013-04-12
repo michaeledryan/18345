@@ -4,6 +4,7 @@ import edu.cmu.ece.backend.UDPManager;
 import edu.cmu.ece.backend.UDPSender;
 import edu.cmu.ece.frontend.HTTPServer;
 import edu.cmu.ece.frontend.ParseConf;
+import edu.cmu.ece.routing.NetworkGraph;
 import edu.cmu.ece.routing.RoutingTable;
 
 /**
@@ -46,9 +47,9 @@ public class VodServer {
 		}
 		
 		// Setup routing table with our ports
-		RoutingTable router = RoutingTable.getInstance();
-		router.setFrontendPort(httpPort);
-		router.setBackendPort(udpPort);
+		NetworkGraph net = NetworkGraph.getInstance();
+		net.setFrontendPort(httpPort);
+		net.setBackendPort(udpPort);
 
 
 		// Run servers on their own threads

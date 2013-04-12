@@ -1,5 +1,6 @@
 package edu.cmu.ece.routing;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -12,16 +13,25 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 
+import com.google.gson.Gson;
+
 public class NetworkGraph {
 	private static NetworkGraph instance = null;
 	private RoutingTable router = RoutingTable.getInstance();
 
 	private Map<UUID, Neighbor> neighbors = new ConcurrentHashMap<UUID, Neighbor>();
 	private Map<UUID, Set<Peer>> adjacencies = new ConcurrentHashMap<UUID, Set<Peer>>();
-	
+
 	// Represents the highest sequence number we have seen so far
 	private int sequenceNumber = 0;
 
+	private UUID myUUID;
+	private String myName;
+	private int frontendPort;
+	private int backendPort;
+	
+	
+	
 	/**
 	 * Returns the instance of NetworkGraph.
 	 * 
@@ -37,8 +47,44 @@ public class NetworkGraph {
 	 * Private constructor for a singleton.
 	 */
 	private NetworkGraph() {
-		//Add ourself to the network graph
-		adjacencies.put(router.getUUID(), new ConcurrentSkipListSet<Peer>());
+		// Add ourself to the network graph
+		// adjacencies.put(myUUID, new ConcurrentSkipListSet<Peer>());
+	}
+
+	/**
+	 * Get/set this server's properties
+	 */
+	public UUID getUUID() {
+		return myUUID;
+	}
+
+	public int getFrontendPort() {
+		return frontendPort;
+	}
+
+	public int getBackendPort() {
+		return backendPort;
+	}
+
+	public String getName() {
+		return myName;
+	}
+
+	public void setUUID(UUID newUUID) {
+		myUUID = newUUID;
+		adjacencies.put(myUUID, new ConcurrentSkipListSet<Peer>());
+	}
+
+	public void setName(String newName) {
+		myName = newName;
+	}
+
+	public void setFrontendPort(int frontendPort) {
+		this.frontendPort = frontendPort;
+	}
+
+	public void setBackendPort(int backendPort) {
+		this.backendPort = backendPort;
 	}
 
 	/**
@@ -58,7 +104,14 @@ public class NetworkGraph {
 	public Neighbor getNeighbor(UUID u) {
 		return neighbors.get(u);
 	}
-
+ 
+	/**
+	 * Remove a neighbor by UUID
+	 */
+	public Neighbor removeNeighbor(UUID u) {
+		return neighbors.remove(u);
+	}
+	
 	/**
 	 * Get a Collection of all our neighbors
 	 */
@@ -66,9 +119,22 @@ public class NetworkGraph {
 		return neighbors.values();
 	}
 
-	public String getNeighborJSON() {
-		// TODO: this whole function
-		return "";
+	
+	
+	
+	/**
+	 * Puts the serializable fields in a map, then uses gson to parse 
+	 * @return a string containin JSONified fields.
+	 */
+	public String getNeighborJSONforWeb() {
+		ArrayList<Map<String,String>> neighborMaps = new ArrayList<>(); 
+		for (Neighbor neighbor : neighbors.values()) {
+			neighborMaps.add(neighbor.getJSONMap());
+		}
+		
+		Gson gson = new Gson();
+		
+		return gson.toJson(neighborMaps);
 	}
 
 	/**
@@ -79,9 +145,8 @@ public class NetworkGraph {
 
 		// Also add neighbor to network graph
 		Peer p = new Peer(n.getUuid(), n.getDistanceMetric());
-		adjacencies.get(router.getUUID()).add(p);
+		adjacencies.get(myUUID).add(p);
 	}
-
 
 	/*
 	 * Given a node and a peer it has as a neighbor, we need to update our
@@ -120,7 +185,6 @@ public class NetworkGraph {
 	public Set<Peer> getAdjacencies(UUID node) {
 		return adjacencies.get(node);
 	}
-
 
 	/*
 	 * Gets the shortest paths to every node from this server. Uses dijkstra's.
@@ -162,7 +226,7 @@ public class NetworkGraph {
 
 		// Queue for graph traversal - in cost order
 		PriorityQueue<GraphNode> q = new PriorityQueue<GraphNode>();
-		q.add(new GraphNode(router.getUUID(), 0, new LinkedList<UUID>()));
+		q.add(new GraphNode(myUUID, 0, new LinkedList<UUID>()));
 
 		while (!q.isEmpty()) {
 			// Get a node, discard it if we saw it

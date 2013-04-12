@@ -98,6 +98,16 @@ public class HTTPRequestHandler {
 				return;
 			}
 
+			if (requested.startsWith("uuid", 5)) {
+				HTTPResponses.sendUUID(request, textOut);
+				return;
+			}
+			
+			if (requested.startsWith("neighbors", 5)) {
+				HTTPResponses.sendNeighbors(request, textOut);
+				return;
+			}
+			
 			// Next check if we need to configure routing settings
 			if (requested.startsWith("config?", 5)) {
 				// Handle mystery peer config
@@ -221,6 +231,8 @@ public class HTTPRequestHandler {
 
 			// TODO: makeSomething(path, uuid, rate). We must be able to look up
 			// by UUID
+			
+			
 			HTTPResponses.sendPeerUUIDConfigMessage(path, request, textOut,
 					uuid, rate);
 		}

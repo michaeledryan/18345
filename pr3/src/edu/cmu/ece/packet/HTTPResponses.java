@@ -3,7 +3,10 @@ package edu.cmu.ece.packet;
 import java.io.PrintWriter;
 import java.util.Date;
 
+import com.google.gson.Gson;
+
 import edu.cmu.ece.backend.PeerData;
+import edu.cmu.ece.routing.NetworkGraph;
 
 public class HTTPResponses {
 	/**
@@ -69,6 +72,7 @@ public class HTTPResponses {
 
 	/**
 	 * Respond to add requests that give a UUID.
+	 * 
 	 * @param path
 	 * @param request
 	 * @param out
@@ -108,6 +112,7 @@ public class HTTPResponses {
 
 	/**
 	 * Respond to addneighbor requests.
+	 * 
 	 * @param request
 	 * @param out
 	 * @param uuid
@@ -174,4 +179,52 @@ public class HTTPResponses {
 		out.flush();
 
 	}
+
+	public static void sendUUID(HTTPRequestPacket request, PrintWriter out) {
+		String header = "HTTP/1.1 200 OK\r\n";
+		String connection = request.getHeader("Connection");
+
+		if (connection != null && connection.equalsIgnoreCase("close"))
+			header += "Connection: Close\r\n";
+		else
+			header += "Connection: Keep-Alive\r\n";
+		header += "Date: " + HTTPResponseHeader.formatDate(new Date()) + "\r\n";
+
+		String page = "{\"uuid\":"
+				+ NetworkGraph.getInstance().getUUID().toString() + "\"}";
+
+		header += "Content-Type: text/html\r\n";
+		header += "Content-Length: " + page.length() + "\r\n";
+		header += "\r\n";
+
+		out.write(header);
+		out.write(page);
+		out.flush();
+
+	}
+	
+	public static void sendNeighbors(HTTPRequestPacket request, PrintWriter out) {
+		String header = "HTTP/1.1 200 OK\r\n";
+		String connection = request.getHeader("Connection");
+
+		if (connection != null && connection.equalsIgnoreCase("close"))
+			header += "Connection: Close\r\n";
+		else
+			header += "Connection: Keep-Alive\r\n";
+		header += "Date: " + HTTPResponseHeader.formatDate(new Date()) + "\r\n";
+
+		Gson gson = new Gson();
+		
+		String page = NetworkGraph.getInstance().getNeighborJSONforWeb();
+		
+		header += "Content-Type: text/html\r\n";
+		header += "Content-Length: " + page.length() + "\r\n";
+		header += "\r\n";
+		
+		out.write(header);
+		out.write(page);
+		out.flush();
+		
+	}
+	
 }
