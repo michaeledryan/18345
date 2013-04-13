@@ -27,9 +27,7 @@ public class NetworkGraph {
 	private String myName;
 	private int frontendPort;
 	private int backendPort;
-	
-	
-	
+
 	/**
 	 * Returns the instance of NetworkGraph.
 	 * 
@@ -102,41 +100,41 @@ public class NetworkGraph {
 	public Neighbor getNeighbor(UUID u) {
 		return neighbors.get(u);
 	}
- 
+
 	/**
 	 * Remove a neighbor by UUID
 	 */
 	public Neighbor removeNeighbor(UUID u) {
 		return neighbors.remove(u);
 	}
-	
+
 	/**
 	 * Get a Collection of all our neighbors
 	 */
 	public Collection<Neighbor> getNeighbors() {
 		return neighbors.values();
 	}
-	
+
 	/**
 	 * Get all neighbors
 	 */
 	public Map<UUID, Map<UUID, Integer>> getAllNeighbors() {
 		return adjacencies;
 	}
-	
-	
+
 	/**
-	 * Puts the serializable fields in a map, then uses gson to parse 
-	 * @return a string containin JSONified fields.
+	 * Puts the serializable fields in a map, then uses gson to parse
+	 * 
+	 * @return a string containing JSONified fields.
 	 */
 	public String getNeighborJSONforWeb() {
-		ArrayList<Map<String,String>> neighborMaps = new ArrayList<>(); 
+		ArrayList<Map<String, String>> neighborMaps = new ArrayList<>();
 		for (Neighbor neighbor : neighbors.values()) {
 			neighborMaps.add(neighbor.getJSONMap());
 		}
-		
+
 		Gson gson = new Gson();
-		
+
 		return gson.toJson(neighborMaps);
 	}
 
@@ -161,7 +159,15 @@ public class NetworkGraph {
 
 		if (adjacencies.containsKey(node)) {
 			nodeMap = adjacencies.get(node);
-			int old = nodeMap.put(edge, distance);
+
+			Integer oldInt = nodeMap.put(edge, new Integer(distance));
+			int old;
+			if (oldInt == null) {
+				old = -1; // TODO: Is this correct? Ones that previously did not
+							// exist had an infinite distance
+			} else {
+				old = oldInt.intValue();
+			}
 
 			changes = (old != distance);
 		} else {

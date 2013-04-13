@@ -29,7 +29,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	private static int peerTimeout = 1000; // ms
 	private RoutingTable router = RoutingTable.getInstance();
 	private NetworkGraph network = NetworkGraph.getInstance();
-	
+
 	private int id;
 	private UUID uuid;
 	private String name;
@@ -43,7 +43,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	private BufferedReader in;
 	private PrintWriter out;
 	private Timer timer;
-
 
 	public Neighbor(UUID newUuid, String newHost, int newFrontendPort,
 			int newBackendPort, int newMetric) {
@@ -89,6 +88,8 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 				System.err.println("Invalid neighbor address.");
 			} catch (ConnectException e) {
 				// Do nothing but retry to connect after a delay
+				// TODO: Take it out of the list of neighbors?
+				// network.removeNeighbor(uuid);
 				System.out.println("Couldn't find. Waiting...");
 				try {
 					Thread.sleep(10000);
@@ -160,6 +161,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					listening = false;
 					break;
 				} else if (message.equals("No updates")) {
+					// Keep alive
 					// Flush blank line
 					in.readLine();
 					continue;
@@ -168,7 +170,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					int seqNum = Integer.parseInt(message.split(" ")[1]);
 					System.out
 							.println("Neighbor has sent updates with seqNum: "
-							+ seqNum);
+									+ seqNum);
 
 					// Ignore old sequence numbers. Just pull whole message to
 					// toss it
@@ -177,7 +179,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 							;
 					}
 					network.setSequenceNumber(seqNum);
-
 
 					// Prep JSON
 					Gson gson = new Gson();
@@ -189,9 +190,20 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					// Read in path and map
 					String pathLine = in.readLine();
 					String mapLine = in.readLine();
+					System.out.println("\tJSON PATH AND MAP");
+					// TODO: We're sometimes getting a "No updates" message
+					// here.
+					System.out.println(pathLine);
+					System.out.println(mapLine);
+					if (pathLine.startsWith("No")) {
+						continue;
+					}
+					
 					List<UUID> path = gson.fromJson(pathLine, pathType);
 					Map<UUID, Map<UUID, Integer>> updates = gson.fromJson(
 							mapLine, mapType);
+
+					path.add(network.getUUID());
 
 					// Check JSON parsing
 					if (path == null || updates == null)
@@ -209,17 +221,16 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 								if (!changes.containsKey(uuid))
 									changes.put(uuid,
 											new HashMap<UUID, Integer>());
-								changes.get(uuid).put(peer.getKey(),
-										peer.getValue());
+							changes.get(uuid).put(peer.getKey(),
+									peer.getValue());
 						}
 					}
 
-						
 					// If we saw any changes, inform our neighbors.
 					if (changes.isEmpty())
 						return;
 					for (Neighbor n : network.getNeighbors()) {
-						n.sendChanges(seqNum, path, changes);
+						n.sendChanges(seqNum + 1, path, changes);
 					}
 				} else {
 					// Invalid message
@@ -233,7 +244,17 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 				break;
 				// TODO: update our graph - how do we do that?
 				// TODO: try to reconnect periodically?
+
 			} catch (IOException e) {
+				// We can no longer send to this peer.
+				try {
+					connection.close();
+					listening = false;
+					network.removeNeighbor(uuid);
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
 				System.err.println("Couldn't read incoming peer message: " + e);
 			}
 		}
@@ -250,8 +271,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		// Retry
 		run();
 	}
-	
-	
+
 	/*
 	 * Sends a keep-alive periodically to our neighbor Send at 1/3 the timeout
 	 * so we have to miss two in a row
@@ -281,29 +301,33 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	public void sendChanges(int seqNum, List<UUID> path,
 			Map<UUID, Map<UUID, Integer>> changes) {
 		// If this neighbor is in the path, discard it
-		if (path.contains(uuid))
+		if (path.contains(uuid)) {
 			return;
+		}
 
 		// Convert to JSON
 		Gson gson = new Gson();
 		String JSONpath = gson.toJson(path);
 		String JSONchanges = gson.toJson(changes);
-		
+
 		// Write out
-		out.print("Updates " + seqNum + "\r\n");
-		out.print(JSONpath + "\r\n");
-		out.print(JSONchanges + "\r\n");
-		out.flush();
+		System.out.println(seqNum);
+		System.out.println(out == null);
+		if (out != null) {
+			out.print("Updates " + seqNum + "\r\n");
+			out.print(JSONpath + "\r\n");
+			out.print(JSONchanges + "\r\n");
+			out.flush();
+		}
 
 		// TODO: reset timer? Since a change message tells us we are alive that
 		// would be okay to do
 	}
 
-
 	public UUID getUuid() {
 		return uuid;
 	}
-	
+
 	public int getDistanceMetric() {
 		return distance;
 	}
