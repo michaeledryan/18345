@@ -39,10 +39,16 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	private int distance;
 	private int originalDistance;
 
+
 	private Socket connection;
 	private BufferedReader in;
 	private PrintWriter out;
 	private Timer timer;
+
+	// Provide a lock for the comms, so we can't interleave change messages
+	// and keepalive messages
+	public Object commLock = new Object();
+
 
 	public Neighbor(UUID newUuid, String newHost, int newFrontendPort,
 			int newBackendPort, int newMetric) {
@@ -52,8 +58,11 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		name = uuid.toString();
 		frontendPort = newFrontendPort;
 		backendPort = newBackendPort;
-		distance = newMetric;
-		originalDistance = distance;
+		distance = -1; // start off at infinity
+		originalDistance = newMetric;
+
+		// Add ourself to table
+		network.addAjacency(network.getUUID(), uuid, -1);
 
 		// Start main loop
 		new Thread(this).start();
@@ -141,12 +150,17 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		} catch (SocketException e1) {
 			e1.printStackTrace();
 		}
+		
+		//Update our distance metric
+		distance = originalDistance;
+		network.addAjacency(network.getUUID(), uuid, distance);
 
-		// Send first changes
+		// Send initial changes
 		List<UUID> firstPath = new ArrayList<UUID>();
 		firstPath.add(network.getUUID());
-		sendChanges(network.getSequenceNumber(), firstPath,
+		sendChanges(network.lastSeqNum(network.getUUID()), firstPath,
 				network.getAllNeighbors());
+
 
 		// Listen until peer disconnects
 		boolean listening = true;
@@ -166,20 +180,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					in.readLine();
 					continue;
 				} else if (message.startsWith("Updates ")) {
-					// We have reachability updates
-					int seqNum = Integer.parseInt(message.split(" ")[1]);
-					System.out
-							.println("Neighbor has sent updates with seqNum: "
-									+ seqNum);
-
-					// Ignore old sequence numbers. Just pull whole message to
-					// toss it
-					if (seqNum < network.getSequenceNumber()) {
-						while (!in.readLine().equals(""))
-							;
-					}
-					network.setSequenceNumber(seqNum);
-
 					// Prep JSON
 					Gson gson = new Gson();
 					Type pathType = new TypeToken<ArrayList<UUID>>() {
@@ -187,27 +187,49 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					Type mapType = new TypeToken<HashMap<UUID, HashMap<UUID, Integer>>>() {
 					}.getType();
 
-					// Read in path and map
+
+					// Parse seqNum from update header
+					int seqNum = Integer.parseInt(message.split(" ")[1]);
+					System.out
+							.println("Neighbor has sent updates with seqNum: "
+									+ seqNum);
+
+					// Read in path
 					String pathLine = in.readLine();
-					String mapLine = in.readLine();
-					System.out.println("\tJSON PATH AND MAP");
 					// TODO: We're sometimes getting a "No updates" message
 					// here.
-					System.out.println(pathLine);
-					System.out.println(mapLine);
 					if (pathLine.startsWith("No")) {
+						System.err.println("CONCURRENCY ERROR");
 						continue;
 					}
-					
 					List<UUID> path = gson.fromJson(pathLine, pathType);
+					path.add(network.getUUID());
+
+					// Read in map
+					String mapLine = in.readLine();
 					Map<UUID, Map<UUID, Integer>> updates = gson.fromJson(
 							mapLine, mapType);
+					System.out.println("\tJSON PATH AND MAP");
+					System.out.println(pathLine);
+					System.out.println(mapLine);
 
-					path.add(network.getUUID());
+
+					// Ignore old sequence numbers. Just pull whole message to
+					// toss it. The sequence number corresponds to the original
+					// sender.
+					int lastSeqNum = network.lastSeqNum(path.get(0));
+					if (seqNum < lastSeqNum) {
+						while (!in.readLine().equals(""))
+							;
+						continue;
+					}
+					network.setSeqNum(path.get(0), seqNum);
+
 
 					// Check JSON parsing
 					if (path == null || updates == null)
 						throw new IOException("Invalid JSON.");
+
 
 					// Push map to the table. Keep track of new changes to send
 					Map<UUID, Map<UUID, Integer>> changes = new HashMap<UUID, Map<UUID, Integer>>();
@@ -230,7 +252,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					if (changes.isEmpty())
 						return;
 					for (Neighbor n : network.getNeighbors()) {
-						n.sendChanges(seqNum + 1, path, changes);
+						n.sendChanges(seqNum, path, changes);
 					}
 				} else {
 					// Invalid message
@@ -268,6 +290,11 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 			System.err.println("Could not close socket to neighbor.");
 		}
 
+		// Reset distance stuff
+		distance = -1;
+		network.addAjacency(network.getUUID(), uuid, -1);
+		network.removeAdjacencyNode(uuid);
+
 		// Retry
 		run();
 	}
@@ -290,8 +317,10 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 	private void sendKeepAlive() {
 		// Send no updates message
-		out.print("No updates\r\n\r\n");
-		out.flush();
+		synchronized (commLock) {
+			out.print("No updates\r\n\r\n");
+			out.flush();
+		}
 	}
 
 	/*
@@ -314,10 +343,12 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		System.out.println(seqNum);
 		System.out.println(out == null);
 		if (out != null) {
-			out.print("Updates " + seqNum + "\r\n");
-			out.print(JSONpath + "\r\n");
-			out.print(JSONchanges + "\r\n");
-			out.flush();
+			synchronized (commLock) {
+				out.print("Updates " + seqNum + "\r\n");
+				out.print(JSONpath + "\r\n");
+				out.print(JSONchanges + "\r\n");
+				out.flush();
+			}
 		}
 
 		// TODO: reset timer? Since a change message tells us we are alive that

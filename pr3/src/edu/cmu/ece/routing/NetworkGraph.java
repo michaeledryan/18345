@@ -15,14 +15,17 @@ import com.google.gson.Gson;
 
 public class NetworkGraph {
 	private static NetworkGraph instance = null;
-	private RoutingTable router = RoutingTable.getInstance();
 
+	// Keeps track of our direct neighbors over TCP
 	private Map<UUID, Neighbor> neighbors = new ConcurrentHashMap<UUID, Neighbor>();
+
+	// Keeps track of last sequence number from every node in the network
+	private Map<UUID, Integer> seqNums = new ConcurrentHashMap<UUID, Integer>();
+
+	// Keeps track of our entire network state graph
 	private Map<UUID, Map<UUID, Integer>> adjacencies = new ConcurrentHashMap<UUID, Map<UUID, Integer>>();
 
-	// Represents the highest sequence number we have seen so far
-	private int sequenceNumber = 0;
-
+	// Stats for this node
 	private UUID myUUID;
 	private String myName;
 	private int frontendPort;
@@ -84,17 +87,6 @@ public class NetworkGraph {
 	}
 
 	/**
-	 * Get and set sequence number
-	 */
-	public int getSequenceNumber() {
-		return sequenceNumber;
-	}
-
-	public void setSequenceNumber(int sequenceNumber) {
-		this.sequenceNumber = sequenceNumber;
-	}
-
-	/**
 	 * Get a neighbor by UUID
 	 */
 	public Neighbor getNeighbor(UUID u) {
@@ -130,7 +122,9 @@ public class NetworkGraph {
 	public String getNeighborJSONforWeb() {
 		ArrayList<Map<String, String>> neighborMaps = new ArrayList<>();
 		for (Neighbor neighbor : neighbors.values()) {
-			neighborMaps.add(neighbor.getJSONMap());
+			// If this node is connected, add it
+			if (neighbor.getDistanceMetric() >= 0)
+				neighborMaps.add(neighbor.getJSONMap());
 		}
 
 		Gson gson = new Gson();
@@ -145,7 +139,26 @@ public class NetworkGraph {
 		neighbors.put(n.getUuid(), n);
 
 		// Also add neighbor to network graph
-		adjacencies.get(myUUID).put(n.getUuid(), n.getDistanceMetric());
+		// Moved to neighbor itself
+		// adjacencies.get(myUUID).put(n.getUuid(), n.getDistanceMetric());
+	}
+
+	/*
+	 * Get the last sequence number seen from a certain node
+	 */
+	public int lastSeqNum(UUID from) {
+		Integer value = seqNums.get(from);
+		if (value == null)
+			return 0;
+		else
+			return value.intValue();
+	}
+
+	/*
+	 * Set the last sequence number from a certain node
+	 */
+	public void setSeqNum(UUID from, int newSeqNum) {
+		seqNums.put(from, newSeqNum);
 	}
 
 	/*
@@ -155,28 +168,24 @@ public class NetworkGraph {
 	 */
 	public boolean addAjacency(UUID node, UUID edge, int distance) {
 		Map<UUID, Integer> nodeMap;
-		boolean changes = true;
+		boolean changed = true; // Assume the value changed, check below
 
 		if (adjacencies.containsKey(node)) {
 			nodeMap = adjacencies.get(node);
 
+			// Replace and determine whether the value changed
 			Integer oldInt = nodeMap.put(edge, new Integer(distance));
-			int old;
-			if (oldInt == null) {
-				old = -1; // TODO: Is this correct? Ones that previously did not
-							// exist had an infinite distance
-			} else {
-				old = oldInt.intValue();
+			if (oldInt != null) {
+				changed = (oldInt.intValue() != distance);
 			}
 
-			changes = (old != distance);
 		} else {
 			nodeMap = new HashMap<UUID, Integer>();
 			nodeMap.put(edge, distance);
 			adjacencies.put(node, nodeMap);
 		}
 
-		return true;
+		return changed;
 	}
 
 	/*
@@ -184,6 +193,41 @@ public class NetworkGraph {
 	 */
 	public Map<UUID, Integer> getAdjacencies(UUID node) {
 		return adjacencies.get(node);
+	}
+	
+	/*
+	 * Removes a node from th enetwork graph
+	 */
+	public void removeAdjacencyNode(UUID node) {
+		adjacencies.remove(node);
+	}
+
+	/**
+	 * Puts the serializable fields in a map, then uses gson to parse
+	 * 
+	 * @return a string containing JSONified fields.
+	 */
+	public String getNetworkMapJSONforWeb() {
+		Map<String, Map<String, Integer>> networkMap = new HashMap<String, Map<String, Integer>>();
+
+		// Loop over every node in the network. For each node create a map of
+		// that nodes edges
+		for (Map.Entry<UUID, Map<UUID,Integer>> node : adjacencies.entrySet()) {
+			Map<String, Integer> edges = new HashMap<String, Integer>();
+			networkMap.put(node.getKey().toString(), edges);
+
+			// Loop over every edge for a node, add it to map, if its distance
+			// is not infinity
+			for (Map.Entry<UUID, Integer> edge : node.getValue().entrySet()) {
+				if (edge.getValue().intValue() >= 0)
+					edges.put(edge.getKey().toString(), edge.getValue()
+							.intValue());
+			}
+		}
+
+		// Convert to JSON string
+		Gson gson = new Gson();
+		return gson.toJson(networkMap);
 	}
 
 	/*
@@ -240,6 +284,10 @@ public class NetworkGraph {
 			// Follow every edge and add to queue
 			Map<UUID, Integer> edges = getAdjacencies(n.uuid);
 			for (Map.Entry<UUID, Integer> p : edges.entrySet()) {
+				// Discard infinity
+				if (p.getValue() < 0)
+					continue;
+
 				LinkedList<UUID> path = new LinkedList<UUID>();
 				Collections.copy(path, n.path);
 				path.add(p.getKey());
