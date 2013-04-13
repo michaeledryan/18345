@@ -168,6 +168,13 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		// Inform all our neighbors we are alive!
 		sendSelfChange();
 
+		// Send our name
+		synchronized (commLock) {
+			out.write("Name " + network.getName());
+			out.write("\r\n");
+			out.flush();
+		}
+
 
 		// Listen until peer disconnects
 		while (true) {
@@ -184,6 +191,8 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					// Flush blank line
 					in.readLine();
 					continue;
+				} else if (message.startsWith("Name ")) {
+					name = message.substring(5);
 				} else if (message.startsWith("Updates ")) {
 					// Prep JSON
 					Gson gson = new Gson();
