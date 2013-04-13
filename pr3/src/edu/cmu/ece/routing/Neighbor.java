@@ -144,36 +144,36 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		// Set up connection if we are superior
 		else if (network.getUUID().compareTo(uuid) < 0)
 			requestPeering();
-
+		
+		
 		// Configure connection
-		System.out.println("\tPeer connection established.");
-		startKeepAlive();
 		try {
 			connection.setSoTimeout(peerTimeout);
 		} catch (SocketException e1) {
 			e1.printStackTrace();
 		}
 		
+		// Send our name
+		synchronized (commLock) {
+		System.out.println("\tPeer connection established.");
+			out.write("Name " + network.getName());
+			out.write("\r\n");
+			out.flush();
+		}
+
+		// Start keep alive messages
+		startKeepAlive();
+		
 		//Update our distance metric
 		distance = originalDistance;
 		network.addAjacency(network.getUUID(), uuid, distance);
 
 		// Send initial changes
+		int firstSeqNum = network.getNextSeqNum();
+		network.incNextSeqNum();
 		List<UUID> firstPath = new ArrayList<UUID>();
 		firstPath.add(network.getUUID());
-		sendChanges(network.getNextSeqNum(), firstPath,
-				network.getAllNeighbors());
-		network.incNextSeqNum();
-
-		// Inform all our neighbors we are alive!
-		sendSelfChange();
-
-		// Send our name
-		synchronized (commLock) {
-			out.write("Name " + network.getName());
-			out.write("\r\n");
-			out.flush();
-		}
+		sendChanges(firstSeqNum, firstPath, network.getAllNeighbors());
 
 
 		// Listen until peer disconnects
@@ -188,8 +188,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					break;
 				} else if (message.equals("No updates")) {
 					// Keep alive
-					// Flush blank line
-					in.readLine();
 					continue;
 				} else if (message.startsWith("Name ")) {
 					name = message.substring(5);
@@ -223,9 +221,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					String mapLine = in.readLine();
 					Map<UUID, Map<UUID, Integer>> updates = gson.fromJson(
 							mapLine, mapType);
-					System.out.println("\tJSON PATH AND MAP");
-					System.out.println(pathLine);
-					System.out.println(mapLine);
 
 					// Check JSON parsing
 					if (path == null || updates == null)
@@ -320,7 +315,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	private void sendKeepAlive() {
 		// Send no updates message
 		synchronized (commLock) {
-			out.print("No updates\r\n\r\n");
+			out.print("No updates\r\n");
 			out.flush();
 		}
 	}
@@ -342,8 +337,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		String JSONchanges = gson.toJson(changes);
 
 		// Write out
-		System.out.println(seqNum);
-		System.out.println(out == null);
 		if (out != null) {
 			synchronized (commLock) {
 				out.print("Updates " + seqNum + "\r\n");
