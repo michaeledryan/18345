@@ -13,6 +13,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.gson.Gson;
 
+import edu.cmu.ece.frontend.NameAndNeighbors;
+
 public class NetworkGraph {
 	private static NetworkGraph instance = null;
 
@@ -24,7 +26,7 @@ public class NetworkGraph {
 	int nextSeqNum = 0;
 
 	// Keeps track of our entire network state graph
-	private Map<UUID, Map<UUID, Integer>> adjacencies = new ConcurrentHashMap<UUID, Map<UUID, Integer>>();
+	private Map<UUID, NameAndNeighbors> adjacencies = new ConcurrentHashMap<UUID, NameAndNeighbors>();
 
 	// Stats for this node
 	private UUID myUUID;
@@ -76,7 +78,8 @@ public class NetworkGraph {
 
 	public void setUUID(UUID newUUID) {
 		myUUID = newUUID;
-		adjacencies.put(myUUID, new HashMap<UUID, Integer>());
+		adjacencies.put(myUUID, new NameAndNeighbors(myName,
+				new HashMap<UUID, Integer>()));
 	}
 
 	public void setName(String newName) {
@@ -119,7 +122,7 @@ public class NetworkGraph {
 	/**
 	 * Get all neighbors
 	 */
-	public Map<UUID, Map<UUID, Integer>> getAllNeighbors() {
+	public Map<UUID, NameAndNeighbors> getAllNeighbors() {
 		return adjacencies;
 	}
 
@@ -175,12 +178,13 @@ public class NetworkGraph {
 	 * adjacency graph. Replaces any node's neighbor with the new peer so as to
 	 * make maintaining distances easy. Returns true if we have changed
 	 */
-	public boolean addAjacency(UUID node, UUID edge, int distance) {
+	public boolean addAjacency(UUID node, UUID edge, int distance, String name) {
 		Map<UUID, Integer> nodeMap;
+		NameAndNeighbors nans;
 		boolean changed = true; // Assume the value changed, check below
 
 		if (adjacencies.containsKey(node)) {
-			nodeMap = adjacencies.get(node);
+			nodeMap = adjacencies.get(node).getNeighbors();
 
 			// Replace and determine whether the value changed
 			Integer oldInt = nodeMap.put(edge, new Integer(distance));
@@ -191,7 +195,7 @@ public class NetworkGraph {
 		} else {
 			nodeMap = new HashMap<UUID, Integer>();
 			nodeMap.put(edge, distance);
-			adjacencies.put(node, nodeMap);
+			adjacencies.put(node, new NameAndNeighbors(name, nodeMap));
 		}
 
 		return changed;
@@ -201,9 +205,9 @@ public class NetworkGraph {
 	 * Returns a set of adjacent peers to a given node
 	 */
 	public Map<UUID, Integer> getAdjacencies(UUID node) {
-		return adjacencies.get(node);
+		return adjacencies.get(node).getNeighbors();
 	}
-	
+
 	/*
 	 * Removes a node from th enetwork graph
 	 */
@@ -221,13 +225,14 @@ public class NetworkGraph {
 
 		// Loop over every node in the network. For each node create a map of
 		// that nodes edges
-		for (Map.Entry<UUID, Map<UUID,Integer>> node : adjacencies.entrySet()) {
+		for (Map.Entry<UUID, NameAndNeighbors> node : adjacencies.entrySet()) {
 			Map<String, Integer> edges = new HashMap<String, Integer>();
 			networkMap.put(node.getKey().toString(), edges);
 
 			// Loop over every edge for a node, add it to map, if its distance
 			// is not infinity
-			for (Map.Entry<UUID, Integer> edge : node.getValue().entrySet()) {
+			for (Map.Entry<UUID, Integer> edge : node.getValue().getNeighbors()
+					.entrySet()) {
 				if (edge.getValue().intValue() >= 0)
 					edges.put(edge.getKey().toString(), edge.getValue()
 							.intValue());

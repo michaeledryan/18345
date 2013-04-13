@@ -12,6 +12,7 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,8 @@ import edu.cmu.ece.backend.PeerData;
 public class Neighbor implements Comparable<Neighbor>, Runnable {
 	private static int nextId = 1;
 	private static int peerTimeout = 1000; // ms
+	private static int connectTimeout = 10000; // ms
+
 	private RoutingTable router = RoutingTable.getInstance();
 	private NetworkGraph network = NetworkGraph.getInstance();
 
@@ -99,7 +102,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 				// network.removeNeighbor(uuid);
 				System.out.println("Couldn't find. Waiting...");
 				try {
-					Thread.sleep(10000);
+					Thread.sleep(connectTimeout);
 				} catch (InterruptedException e1) {
 					// Do nothing
 				}
@@ -162,6 +165,10 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 				network.getAllNeighbors());
 		network.incNextSeqNum();
 
+		// Inform all our neighbors we are alive!
+		sendSelfChange();
+
+
 		// Listen until peer disconnects
 		while (true) {
 			try {
@@ -206,6 +213,9 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					String mapLine = in.readLine();
 					Map<UUID, Map<UUID, Integer>> updates = gson.fromJson(
 							mapLine, mapType);
+					String nameLine = in.readLine();
+					
+					
 					System.out.println("\tJSON PATH AND MAP");
 					System.out.println(pathLine);
 					System.out.println(mapLine);
@@ -232,13 +242,14 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 								.entrySet()) {
 							// If the network graph changed...
 							if (network.addAjacency(uuid, peer.getKey(),
-									peer.getValue()))
+									peer.getValue())) {
 								// Create if necessary
 								if (!changes.containsKey(uuid))
 									changes.put(uuid,
 											new HashMap<UUID, Integer>());
-							changes.get(uuid).put(peer.getKey(),
-									peer.getValue());
+								changes.get(uuid).put(peer.getKey(),
+										peer.getValue());
+							}
 						}
 					}
 
@@ -283,12 +294,10 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		network.addAjacency(network.getUUID(), uuid, -1);
 		network.removeAdjacencyNode(uuid);
 
-		/*
-		 * // Inform our neighbors List<UUID> myself = new ArrayList<UUID>();
-		 * myself.add(network.getUUID());
-		 * 
-		 * Collection<Neighbor> ns = network.getNeighbors();
-		 */
+
+		// Inform our neighbors we died
+		sendSelfChange();
+
 
 		// Retry
 		run();
@@ -350,12 +359,37 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		// would be okay to do
 	}
 
+	public void sendSelfChange() {
+		int seqNum = network.getNextSeqNum();
+		network.incNextSeqNum();
+
+		List<UUID> myself = new ArrayList<UUID>();
+		myself.add(network.getUUID());
+
+		Map<UUID, Integer> oneChange = new HashMap<UUID, Integer>();
+		oneChange.put(uuid, distance);
+		Map<UUID, Map<UUID, Integer>> change = new HashMap<UUID, Map<UUID, Integer>>();
+		change.put(network.getUUID(), oneChange);
+
+		Collection<Neighbor> ns = network.getNeighbors();
+		for (Neighbor n : ns) {
+			if (!n.isAlive())
+				continue;
+
+			n.sendChanges(seqNum, myself, change);
+		}
+	}
+
 	public UUID getUuid() {
 		return uuid;
 	}
 
 	public int getDistanceMetric() {
 		return distance;
+	}
+
+	public boolean isAlive() {
+		return connection != null;
 	}
 
 	/*
