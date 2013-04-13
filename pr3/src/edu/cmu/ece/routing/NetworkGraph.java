@@ -25,6 +25,7 @@ public class NetworkGraph {
 
 	// Keeps track of our entire network state graph
 	private Map<UUID, Map<UUID, Integer>> adjacencies = new ConcurrentHashMap<UUID, Map<UUID, Integer>>();
+	private Map<UUID, String> nameTable = new ConcurrentHashMap<UUID, String>();
 
 	// Stats for this node
 	private UUID myUUID;
@@ -47,8 +48,6 @@ public class NetworkGraph {
 	 * Private constructor for a singleton.
 	 */
 	private NetworkGraph() {
-		// Add ourself to the network graph
-		// adjacencies.put(myUUID, new ConcurrentSkipListSet<Peer>());
 	}
 
 	/**
@@ -81,6 +80,7 @@ public class NetworkGraph {
 
 	public void setName(String newName) {
 		myName = newName;
+		nameTable.put(myUUID, myName);
 	}
 
 	public void setFrontendPort(int frontendPort) {
@@ -211,6 +211,25 @@ public class NetworkGraph {
 		adjacencies.remove(node);
 	}
 
+	/*
+	 * Update the name table
+	 */
+	public void addName(UUID node, String name) {
+		nameTable.put(node, name);
+	}
+
+	public String getName(UUID node) {
+		String name = nameTable.get(node);
+		if (name == null)
+			return node.toString();
+		else
+			return name;
+	}
+
+	public Map<UUID, String> getAllNames() {
+		return nameTable;
+	}
+
 	/**
 	 * Puts the serializable fields in a map, then uses gson to parse
 	 * 
@@ -223,13 +242,13 @@ public class NetworkGraph {
 		// that nodes edges
 		for (Map.Entry<UUID, Map<UUID,Integer>> node : adjacencies.entrySet()) {
 			Map<String, Integer> edges = new HashMap<String, Integer>();
-			networkMap.put(node.getKey().toString(), edges);
+			networkMap.put(getName(node.getKey()), edges);
 
 			// Loop over every edge for a node, add it to map, if its distance
 			// is not infinity
 			for (Map.Entry<UUID, Integer> edge : node.getValue().entrySet()) {
 				if (edge.getValue().intValue() >= 0)
-					edges.put(edge.getKey().toString(), edge.getValue()
+					edges.put(getName(edge.getKey()), edge.getValue()
 							.intValue());
 			}
 		}

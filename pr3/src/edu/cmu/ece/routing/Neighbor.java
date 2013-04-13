@@ -169,11 +169,14 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		network.addAjacency(network.getUUID(), uuid, distance);
 
 		// Send initial changes
+		sendSelfChange();
+
 		int firstSeqNum = network.getNextSeqNum();
 		network.incNextSeqNum();
 		List<UUID> firstPath = new ArrayList<UUID>();
 		firstPath.add(network.getUUID());
 		sendChanges(firstSeqNum, firstPath, network.getAllNeighbors());
+		sendNames(firstPath, network.getAllNames());
 
 
 		// Listen until peer disconnects
@@ -191,6 +194,40 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					continue;
 				} else if (message.startsWith("Name ")) {
 					name = message.substring(5);
+				} else if (message.startsWith("NameUpdate")) {
+					// Prep JSON
+					Gson gson = new Gson();
+					Type pathType = new TypeToken<ArrayList<UUID>>() {
+					}.getType();
+					Type mapType = new TypeToken<HashMap<UUID, String>>() {
+					}.getType();
+
+					// Read in path
+					String pathLine = in.readLine();
+					List<UUID> path = gson.fromJson(pathLine, pathType);
+					path.add(network.getUUID());
+
+					// Read in update
+					String namesLine = in.readLine();
+					Map<UUID, String> updates = gson.fromJson(namesLine,
+							mapType);
+					
+					// Check JSON parsing
+					if (path == null || updates == null)
+						throw new IOException("Invalid JSON.");
+					
+					
+					// Push updates to table
+					for (Map.Entry<UUID, String> e : updates.entrySet()) {
+						network.addName(e.getKey(), e.getValue());
+					}
+					
+					
+					// Inform all our other neighbors
+					for (Neighbor n : network.getNeighbors()) {
+						n.sendNames(path, updates);
+					}
+
 				} else if (message.startsWith("Updates ")) {
 					// Prep JSON
 					Gson gson = new Gson();
@@ -208,12 +245,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 					// Read in path
 					String pathLine = in.readLine();
-					// TODO: We're sometimes getting a "No updates" message
-					// here.
-					if (pathLine.startsWith("No")) {
-						System.err.println("CONCURRENCY ERROR");
-						continue;
-					}
 					List<UUID> path = gson.fromJson(pathLine, pathType);
 					path.add(network.getUUID());
 
@@ -348,6 +379,32 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 		// TODO: reset timer? Since a change message tells us we are alive that
 		// would be okay to do
+	}
+
+	/*
+	 * Sends name changes from this server over this neighbor conncetion. If
+	 * this neighor is in the path this packet traveled, return instead.
+	 */
+	public void sendNames(List<UUID> path, Map<UUID, String> changes) {
+		// If this neighbor is in the path, discard it
+		if (path.contains(uuid)) {
+			return;
+		}
+
+		// Convert to JSON
+		Gson gson = new Gson();
+		String JSONpath = gson.toJson(path);
+		String JSONchanges = gson.toJson(changes);
+
+		// Write out
+		if (out != null) {
+			synchronized (commLock) {
+				out.print("NameUpdates\r\n");
+				out.print(JSONpath + "\r\n");
+				out.print(JSONchanges + "\r\n");
+				out.flush();
+			}
+		}
 	}
 
 	public void sendSelfChange() {
