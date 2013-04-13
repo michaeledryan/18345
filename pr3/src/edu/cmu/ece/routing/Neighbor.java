@@ -220,6 +220,12 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					System.out.println(pathLine);
 					System.out.println(mapLine);
 
+					// Check JSON parsing
+					if (path == null || updates == null)
+						throw new IOException("Invalid JSON.");
+
+
+
 					// Ignore old sequence numbers. Just pull whole message to
 					// toss it. The sequence number corresponds to the original
 					// sender.
@@ -231,33 +237,21 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					}
 					network.setLastSeqNum(path.get(0), seqNum);
 
-					// Check JSON parsing
-					if (path == null || updates == null)
-						throw new IOException("Invalid JSON.");
 
-					// Push map to the table. Keep track of new changes to send
-					Map<UUID, Map<UUID, Integer>> changes = new HashMap<UUID, Map<UUID, Integer>>();
+	
+
+					// Push these updates into our table
 					for (UUID uuid : updates.keySet()) {
 						for (Map.Entry<UUID, Integer> peer : updates.get(uuid)
 								.entrySet()) {
-							// If the network graph changed...
-							if (network.addAjacency(uuid, peer.getKey(),
-									peer.getValue())) {
-								// Create if necessary
-								if (!changes.containsKey(uuid))
-									changes.put(uuid,
-											new HashMap<UUID, Integer>());
-								changes.get(uuid).put(peer.getKey(),
-										peer.getValue());
-							}
+							network.addAjacency(uuid, peer.getKey(),
+									peer.getValue());
 						}
 					}
 
-					// If we saw any changes, inform our neighbors.
-					if (changes.isEmpty())
-						return;
+					// Inform all our other neighbors
 					for (Neighbor n : network.getNeighbors()) {
-						n.sendChanges(seqNum, path, changes);
+						n.sendChanges(seqNum, path, updates);
 					}
 				} else {
 					// Invalid message
