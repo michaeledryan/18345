@@ -132,7 +132,7 @@ public class NetworkGraph {
 		ArrayList<Map<String, String>> neighborMaps = new ArrayList<>();
 		for (Neighbor neighbor : neighbors.values()) {
 			// If this node is connected, add it
-			if (neighbor.getDistanceMetric() >= 0)
+			// if (neighbor.getDistanceMetric() >= 0)
 				neighborMaps.add(neighbor.getJSONMap());
 		}
 
@@ -247,7 +247,7 @@ public class NetworkGraph {
 			// Loop over every edge for a node, add it to map, if its distance
 			// is not infinity
 			for (Map.Entry<UUID, Integer> edge : node.getValue().entrySet()) {
-				if (edge.getValue().intValue() >= 0)
+				// if (edge.getValue().intValue() >= 0)
 					edges.put(getName(edge.getKey()), edge.getValue()
 							.intValue());
 			}

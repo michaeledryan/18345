@@ -168,14 +168,11 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		distance = originalDistance;
 		network.addAjacency(network.getUUID(), uuid, distance);
 
-		// Send initial changes
-		sendSelfChange();
-
-		int firstSeqNum = network.getNextSeqNum();
-		network.incNextSeqNum();
+		// Send initial changes to the network
 		List<UUID> firstPath = new ArrayList<UUID>();
 		firstPath.add(network.getUUID());
-		sendChanges(firstSeqNum, firstPath, network.getAllNeighbors());
+
+		sendSelfChange();
 		sendNames(firstPath, network.getAllNames());
 
 
@@ -233,7 +230,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					Gson gson = new Gson();
 					Type pathType = new TypeToken<ArrayList<UUID>>() {
 					}.getType();
-					Type mapType = new TypeToken<HashMap<UUID, HashMap<UUID, Integer>>>() {
+					Type mapType = new TypeToken<HashMap<UUID, Integer>>() {
 					}.getType();
 
 
@@ -250,8 +247,8 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 					// Read in map
 					String mapLine = in.readLine();
-					Map<UUID, Map<UUID, Integer>> updates = gson.fromJson(
-							mapLine, mapType);
+					Map<UUID, Integer> updates = gson
+							.fromJson(mapLine, mapType);
 
 					// Check JSON parsing
 					if (path == null || updates == null)
@@ -262,21 +259,18 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					// toss it. The sequence number corresponds to the original
 					// sender.
 					int lastSeqNum = network.lastSeqNum(path.get(0));
-					if (seqNum < lastSeqNum) {
-						while (!in.readLine().equals(""))
-							;
+					if (seqNum < lastSeqNum)
 						continue;
-					}
 					network.setLastSeqNum(path.get(0), seqNum);
 
 
 					// Push these updates into our table
-					for (UUID uuid : updates.keySet()) {
-						for (Map.Entry<UUID, Integer> peer : updates.get(uuid)
-								.entrySet()) {
-							network.addAjacency(uuid, peer.getKey(),
-									peer.getValue());
-						}
+					for (Map.Entry<UUID, Integer> peer : updates.entrySet()) {
+						if (peer.getKey().equals(network.getUUID()))
+							continue;
+
+						network.addAjacency(path.get(0), peer.getKey(),
+								peer.getValue());
 					}
 
 					// Inform all our other neighbors
@@ -356,7 +350,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	 * neighbor is in the path this packet traveled, we return instead.
 	 */
 	public void sendChanges(int seqNum, List<UUID> path,
-			Map<UUID, Map<UUID, Integer>> changes) {
+			Map<UUID, Integer> changes) {
 		// If this neighbor is in the path, discard it
 		if (path.contains(uuid)) {
 			return;
@@ -411,20 +405,20 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		int seqNum = network.getNextSeqNum();
 		network.incNextSeqNum();
 
+		// Empty path
 		List<UUID> myself = new ArrayList<UUID>();
 		myself.add(network.getUUID());
 
-		Map<UUID, Integer> oneChange = new HashMap<UUID, Integer>();
-		oneChange.put(uuid, distance);
-		Map<UUID, Map<UUID, Integer>> change = new HashMap<UUID, Map<UUID, Integer>>();
-		change.put(network.getUUID(), oneChange);
+		// Get my neighbors
+		Map<UUID, Integer> changes = network.getAdjacencies(network
+				.getUUID());
 
 		Collection<Neighbor> ns = network.getNeighbors();
 		for (Neighbor n : ns) {
 			if (!n.isAlive())
 				continue;
 
-			n.sendChanges(seqNum, myself, change);
+			n.sendChanges(seqNum, myself, changes);
 		}
 	}
 
