@@ -98,16 +98,24 @@ public class HTTPRequestHandler {
 				return;
 			}
 
+			// Return this client's UUID
 			if (requested.startsWith("uuid", 5)) {
 				HTTPResponses.sendUUID(request, textOut);
 				return;
 			}
 			
+			// Return our neighbors
 			if (requested.startsWith("neighbors", 5)) {
 				HTTPResponses.sendNeighbors(request, textOut);
 				return;
 			}
 			
+			// Return our network map
+			if (requested.startsWith("map", 5)) {
+				HTTPResponses.sendNetworkMap(request, textOut);
+				return;
+			}
+
 			// Next check if we need to configure routing settings
 			if (requested.startsWith("config?", 5)) {
 				// Handle mystery peer config
@@ -115,16 +123,21 @@ public class HTTPRequestHandler {
 				return;
 			}
 			
-			// Otherwise we have a file request... Look it up and either handle
-			// the request or response with a 404
-			String file = requested.substring(10);
-			if (RoutingTable.getInstance().checkPath(file)) {
-				handleRemoteRequest(file);
-				return;
-			} else {
-				HTTPResponses.send404(request, textOut);
-				return;
+			// A file request
+			if (requested.startsWith("view", 5)) {
+				String file = requested.substring(10);
+				if (RoutingTable.getInstance().checkPath(file)) {
+					handleRemoteRequest(file);
+					return;
+				} else {
+					HTTPResponses.send404(request, textOut);
+					return;
+				}
 			}
+
+			// Otherwise just 404
+			HTTPResponses.send404(request, textOut);
+			return;
 		} else if (requested.startsWith("peering_request/")) {
 			String uuid = requested.split("/")[1];
 			handlePeeringRequest(UUID.fromString(uuid));

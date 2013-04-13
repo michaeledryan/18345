@@ -223,4 +223,25 @@ public class HTTPResponses {
 		
 	}
 	
+	public static void sendNetworkMap(HTTPRequestPacket request, PrintWriter out) {
+		String header = "HTTP/1.1 200 OK\r\n";
+		String connection = request.getHeader("Connection");
+
+		if (connection != null && connection.equalsIgnoreCase("close"))
+			header += "Connection: Close\r\n";
+		else
+			header += "Connection: Keep-Alive\r\n";
+		header += "Date: " + HTTPResponseHeader.formatDate(new Date()) + "\r\n";
+
+		String page = NetworkGraph.getInstance().getNetworkMapJSONforWeb();
+
+		header += "Content-Type: text/html\r\n";
+		header += "Content-Length: " + page.length() + "\r\n";
+		header += "\r\n";
+
+		out.write(header);
+		out.write(page);
+		out.flush();
+
+	}
 }
