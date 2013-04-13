@@ -158,13 +158,13 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		// Send initial changes
 		List<UUID> firstPath = new ArrayList<UUID>();
 		firstPath.add(network.getUUID());
-		sendChanges(network.lastSeqNum(network.getUUID()), firstPath,
+		sendChanges(network.getNextSeqNum(), firstPath,
 				network.getAllNeighbors());
+		network.incNextSeqNum();
 
 
 		// Listen until peer disconnects
-		boolean listening = true;
-		while (listening) {
+		while (true) {
 			try {
 				// Wait for incoming message
 				String message = in.readLine();
@@ -172,7 +172,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 				// Parse the message from our peer
 				// No updates is just a keep alive message sent periodically
 				if (message == null) {
-					listening = false;
 					break;
 				} else if (message.equals("No updates")) {
 					// Keep alive
@@ -223,7 +222,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 							;
 						continue;
 					}
-					network.setSeqNum(path.get(0), seqNum);
+					network.setLastSeqNum(path.get(0), seqNum);
 
 
 					// Check JSON parsing
@@ -269,19 +268,14 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 			} catch (IOException e) {
 				// We can no longer send to this peer.
-				try {
-					connection.close();
-					listening = false;
-					network.removeNeighbor(uuid);
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
 				System.err.println("Couldn't read incoming peer message: " + e);
+				timer.cancel();
+				break;
 			}
 		}
 
-		// Close socket and exit
+
+		// Close socket
 		try {
 			System.out.println("Disconnecting from neighbor.");
 			connection.close();
@@ -294,6 +288,15 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		distance = -1;
 		network.addAjacency(network.getUUID(), uuid, -1);
 		network.removeAdjacencyNode(uuid);
+
+
+		/*
+		 * // Inform our neighbors List<UUID> myself = new ArrayList<UUID>();
+		 * myself.add(network.getUUID());
+		 * 
+		 * Collection<Neighbor> ns = network.getNeighbors();
+		 */
+
 
 		// Retry
 		run();

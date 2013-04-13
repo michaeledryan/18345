@@ -21,6 +21,7 @@ public class NetworkGraph {
 
 	// Keeps track of last sequence number from every node in the network
 	private Map<UUID, Integer> seqNums = new ConcurrentHashMap<UUID, Integer>();
+	int nextSeqNum = 0;
 
 	// Keeps track of our entire network state graph
 	private Map<UUID, Map<UUID, Integer>> adjacencies = new ConcurrentHashMap<UUID, Map<UUID, Integer>>();
@@ -69,6 +70,10 @@ public class NetworkGraph {
 		return myName;
 	}
 
+	public int getNextSeqNum() {
+		return nextSeqNum;
+	}
+
 	public void setUUID(UUID newUUID) {
 		myUUID = newUUID;
 		adjacencies.put(myUUID, new HashMap<UUID, Integer>());
@@ -84,6 +89,10 @@ public class NetworkGraph {
 
 	public void setBackendPort(int backendPort) {
 		this.backendPort = backendPort;
+	}
+
+	public void incNextSeqNum() {
+		this.nextSeqNum++;
 	}
 
 	/**
@@ -149,7 +158,7 @@ public class NetworkGraph {
 	public int lastSeqNum(UUID from) {
 		Integer value = seqNums.get(from);
 		if (value == null)
-			return 0;
+			return -1;
 		else
 			return value.intValue();
 	}
@@ -157,7 +166,7 @@ public class NetworkGraph {
 	/*
 	 * Set the last sequence number from a certain node
 	 */
-	public void setSeqNum(UUID from, int newSeqNum) {
+	public void setLastSeqNum(UUID from, int newSeqNum) {
 		seqNums.put(from, newSeqNum);
 	}
 
