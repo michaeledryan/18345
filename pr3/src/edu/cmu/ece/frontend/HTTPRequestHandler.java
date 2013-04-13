@@ -19,6 +19,7 @@ import edu.cmu.ece.packet.HTTPResponses;
 import edu.cmu.ece.packet.ResponseFileData;
 import edu.cmu.ece.packet.UDPPacket;
 import edu.cmu.ece.packet.UDPPacketType;
+import edu.cmu.ece.routing.GraphPeer;
 import edu.cmu.ece.routing.Neighbor;
 import edu.cmu.ece.routing.NetworkGraph;
 import edu.cmu.ece.routing.RoutingTable;
@@ -98,18 +99,24 @@ public class HTTPRequestHandler {
 				return;
 			}
 
+			if (requested.startsWith("kill", 5)) {
+				HTTPResponses.sendKillMessage(request, textOut);
+				System.exit(0);
+				return;
+			}
+
 			// Return this client's UUID
 			if (requested.startsWith("uuid", 5)) {
 				HTTPResponses.sendUUID(request, textOut);
 				return;
 			}
-			
+
 			// Return our neighbors
 			if (requested.startsWith("neighbors", 5)) {
 				HTTPResponses.sendNeighbors(request, textOut);
 				return;
 			}
-			
+
 			// Return our network map
 			if (requested.startsWith("map", 5)) {
 				HTTPResponses.sendNetworkMap(request, textOut);
@@ -122,7 +129,7 @@ public class HTTPRequestHandler {
 				handlePeerConfig(requested.substring(12));
 				return;
 			}
-			
+
 			// A file request
 			if (requested.startsWith("view", 5)) {
 				String file = requested.substring(10);
@@ -243,10 +250,15 @@ public class HTTPRequestHandler {
 			System.out.println("\t\tUUID: " + uuid);
 			System.out.println("\t\tBitrate: " + rate);
 
-			// TODO: makeSomething(path, uuid, rate). We must be able to look up
-			// by UUID
-			
-			
+			router.addContentToGraph(path, new GraphPeer(UUID.fromString(uuid),
+					Integer.parseInt(rate)));
+
+			// TODO: Should we validat on whether or not the neighbor exists?
+
+			System.out.println((NetworkGraph.getInstance().getNeighbor(
+					UUID.fromString(uuid)) == null) ? "No neighbor with that UUID Exists"
+					: "Neighbor found");
+
 			HTTPResponses.sendPeerUUIDConfigMessage(path, request, textOut,
 					uuid, rate);
 		}
@@ -331,7 +343,6 @@ public class HTTPRequestHandler {
 						try {
 							Thread.sleep(200);
 						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
 

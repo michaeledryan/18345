@@ -39,7 +39,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	private int distance;
 	private int originalDistance;
 
-
 	private Socket connection;
 	private BufferedReader in;
 	private PrintWriter out;
@@ -48,7 +47,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	// Provide a lock for the comms, so we can't interleave change messages
 	// and keepalive messages
 	public Object commLock = new Object();
-
 
 	public Neighbor(UUID newUuid, String newHost, int newFrontendPort,
 			int newBackendPort, int newMetric) {
@@ -115,7 +113,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	}
 
 	/*
-	 * Receives the port for our TCP connection via the UDP response.
+	 * Receives the port for our TCP connection.
 	 */
 	public void receivePeering(Socket socket, BufferedReader read,
 			PrintWriter write) {
@@ -123,7 +121,9 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		connection = socket;
 		in = read;
 		out = write;
-
+		
+		
+		
 		// Begin our long and beautiful relationship
 		new Thread(this).start();
 	}
@@ -150,8 +150,8 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		} catch (SocketException e1) {
 			e1.printStackTrace();
 		}
-		
-		//Update our distance metric
+
+		// Update our distance metric
 		distance = originalDistance;
 		network.addAjacency(network.getUUID(), uuid, distance);
 
@@ -161,7 +161,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		sendChanges(network.getNextSeqNum(), firstPath,
 				network.getAllNeighbors());
 		network.incNextSeqNum();
-
 
 		// Listen until peer disconnects
 		while (true) {
@@ -185,7 +184,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					}.getType();
 					Type mapType = new TypeToken<HashMap<UUID, HashMap<UUID, Integer>>>() {
 					}.getType();
-
 
 					// Parse seqNum from update header
 					int seqNum = Integer.parseInt(message.split(" ")[1]);
@@ -212,7 +210,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					System.out.println(pathLine);
 					System.out.println(mapLine);
 
-
 					// Ignore old sequence numbers. Just pull whole message to
 					// toss it. The sequence number corresponds to the original
 					// sender.
@@ -224,11 +221,9 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					}
 					network.setLastSeqNum(path.get(0), seqNum);
 
-
 					// Check JSON parsing
 					if (path == null || updates == null)
 						throw new IOException("Invalid JSON.");
-
 
 					// Push map to the table. Keep track of new changes to send
 					Map<UUID, Map<UUID, Integer>> changes = new HashMap<UUID, Map<UUID, Integer>>();
@@ -274,7 +269,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 			}
 		}
 
-
 		// Close socket
 		try {
 			System.out.println("Disconnecting from neighbor.");
@@ -289,14 +283,12 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		network.addAjacency(network.getUUID(), uuid, -1);
 		network.removeAdjacencyNode(uuid);
 
-
 		/*
 		 * // Inform our neighbors List<UUID> myself = new ArrayList<UUID>();
 		 * myself.add(network.getUUID());
 		 * 
 		 * Collection<Neighbor> ns = network.getNeighbors();
 		 */
-
 
 		// Retry
 		run();

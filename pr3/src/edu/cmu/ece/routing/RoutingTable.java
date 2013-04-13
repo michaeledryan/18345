@@ -16,6 +16,7 @@ public class RoutingTable {
 	private Map<Integer, HTTPClientHandler> idsToClientHandlers = new ConcurrentHashMap<Integer, HTTPClientHandler>();
 	private Map<PeerData, UDPRequestHandler> peersToRequests = new ConcurrentHashMap<PeerData, UDPRequestHandler>();
 	private Map<String, Integer> clientsToBitRates = new ConcurrentHashMap<String, Integer>();
+	private Map<String, GraphPeer> pathsToUUIDS = new ConcurrentHashMap<String, GraphPeer>();
 	
 		
 	/**
@@ -176,4 +177,17 @@ public class RoutingTable {
 	public void removeBitRate(int clientID) {
 		clientsToBitRates.remove(new Integer(clientID));
 	}
+	
+	public GraphPeer removeContentFromGraph(String path) {
+		return pathsToUUIDS.remove(path);
+	}
+	
+	public GraphPeer addContentToGraph(String path, GraphPeer peer) {
+		return pathsToUUIDS.put(path, peer);
+	}
+	
+	public boolean checkGraphPath(String path) {
+		return pathsToUUIDS.containsKey(path);
+	}
+	
 }

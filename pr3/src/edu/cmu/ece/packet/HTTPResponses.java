@@ -200,7 +200,7 @@ public class HTTPResponses {
 		out.flush();
 
 	}
-	
+
 	public static void sendNeighbors(HTTPRequestPacket request, PrintWriter out) {
 		String header = "HTTP/1.1 200 OK\r\n";
 		String connection = request.getHeader("Connection");
@@ -212,17 +212,17 @@ public class HTTPResponses {
 		header += "Date: " + HTTPResponseHeader.formatDate(new Date()) + "\r\n";
 
 		String page = NetworkGraph.getInstance().getNeighborJSONforWeb();
-		
+
 		header += "Content-Type: text/html\r\n";
 		header += "Content-Length: " + page.length() + "\r\n";
 		header += "\r\n";
-		
+
 		out.write(header);
 		out.write(page);
 		out.flush();
-		
+
 	}
-	
+
 	public static void sendNetworkMap(HTTPRequestPacket request, PrintWriter out) {
 		String header = "HTTP/1.1 200 OK\r\n";
 		String connection = request.getHeader("Connection");
@@ -235,6 +235,32 @@ public class HTTPResponses {
 
 		String page = NetworkGraph.getInstance().getNetworkMapJSONforWeb();
 
+		header += "Content-Type: text/html\r\n";
+		header += "Content-Length: " + page.length() + "\r\n";
+		header += "\r\n";
+
+		out.write(header);
+		out.write(page);
+		out.flush();
+
+	}
+
+	public static void sendKillMessage(HTTPRequestPacket request,
+			PrintWriter out) {
+		String header = "HTTP/1.1 200 OK\r\n";
+		String connection = request.getHeader("Connection");
+
+		if (connection != null && connection.equalsIgnoreCase("close"))
+			header += "Connection: Close\r\n";
+		else
+			header += "Connection: Keep-Alive\r\n";
+		header += "Date: " + HTTPResponseHeader.formatDate(new Date()) + "\r\n";
+
+		// Create simple page
+		String page = "<!doctype html><head><title>RIP</title></head>"
+				+ "<body><h3> This server has gone to rest. May its memory live on until the RAM is needed elsewhere.</h3></body></html>";
+
+		// Add the page info
 		header += "Content-Type: text/html\r\n";
 		header += "Content-Length: " + page.length() + "\r\n";
 		header += "\r\n";
