@@ -147,6 +147,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		
 		
 		// Configure connection
+		System.out.println("\tPeer connection established.");
 		try {
 			connection.setSoTimeout(peerTimeout);
 		} catch (SocketException e1) {
@@ -155,8 +156,17 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		
 		// Send our name
 		synchronized (commLock) {
-		System.out.println("\tPeer connection established.");
 			out.write("Name " + network.getName());
+			out.write("\r\n");
+			out.flush();
+		}
+
+		// Send our table
+		String tableJSON = new Gson().toJson(network.getAllNeighbors());
+		synchronized (commLock) {
+			out.write("Table");
+			out.write("\r\n");
+			out.write(tableJSON);
 			out.write("\r\n");
 			out.flush();
 		}
@@ -191,6 +201,28 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					continue;
 				} else if (message.startsWith("Name ")) {
 					name = message.substring(5);
+				} else if (message.equals("Table")) {
+					Type tableType = new TypeToken<HashMap<UUID, HashMap<UUID, Integer>>>() {
+					}.getType();
+
+					// Parse in full table
+					String tableLine = in.readLine();
+					Map<UUID, Map<UUID, Integer>> table = new Gson().fromJson(
+							tableLine, tableType);
+
+					// Add our full table
+					for (Map.Entry<UUID, Map<UUID, Integer>> node : table
+							.entrySet()) {
+						for (Map.Entry<UUID, Integer> peer : node.getValue()
+								.entrySet()) {
+							// Skip ourself
+							if (node.getKey().equals(network.getUUID()))
+								continue;
+
+							network.addAjacency(node.getKey(), peer.getKey(),
+									peer.getValue());
+						}
+					}
 				} else if (message.startsWith("NameUpdate")) {
 					// Prep JSON
 					Gson gson = new Gson();
@@ -266,9 +298,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 					// Push these updates into our table
 					for (Map.Entry<UUID, Integer> peer : updates.entrySet()) {
-						if (peer.getKey().equals(network.getUUID()))
-							continue;
-
 						network.addAjacency(path.get(0), peer.getKey(),
 								peer.getValue());
 					}

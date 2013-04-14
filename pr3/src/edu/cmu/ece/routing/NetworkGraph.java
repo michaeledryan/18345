@@ -2,12 +2,12 @@ package edu.cmu.ece.routing;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -132,7 +132,7 @@ public class NetworkGraph {
 		ArrayList<Map<String, String>> neighborMaps = new ArrayList<>();
 		for (Neighbor neighbor : neighbors.values()) {
 			// If this node is connected, add it
-			// if (neighbor.getDistanceMetric() >= 0)
+			if (neighbor.getDistanceMetric() >= 0)
 				neighborMaps.add(neighbor.getJSONMap());
 		}
 
@@ -205,10 +205,20 @@ public class NetworkGraph {
 	}
 	
 	/*
-	 * Removes a node from th enetwork graph
+	 * Removes a node from the network graph, and also clears any unreachable
+	 * nodes.
 	 */
 	public void removeAdjacencyNode(UUID node) {
 		adjacencies.remove(node);
+
+		// Then traverse graph to find what we can't see
+		Set<UUID> invisibleNodes = adjacencies.keySet();
+		Set<UUID> visibleNodes = getShortestPaths().keySet();
+		invisibleNodes.removeAll(visibleNodes);
+
+		// Remove these from our graph
+		for (UUID n : invisibleNodes)
+			adjacencies.remove(n);
 	}
 
 	/*
@@ -247,7 +257,7 @@ public class NetworkGraph {
 			// Loop over every edge for a node, add it to map, if its distance
 			// is not infinity
 			for (Map.Entry<UUID, Integer> edge : node.getValue().entrySet()) {
-				// if (edge.getValue().intValue() >= 0)
+				if (edge.getValue().intValue() >= 0)
 					edges.put(getName(edge.getKey()), edge.getValue()
 							.intValue());
 			}
@@ -311,13 +321,16 @@ public class NetworkGraph {
 
 			// Follow every edge and add to queue
 			Map<UUID, Integer> edges = getAdjacencies(n.uuid);
+			if (edges == null)
+				continue;
+
 			for (Map.Entry<UUID, Integer> p : edges.entrySet()) {
 				// Discard infinity
 				if (p.getValue() < 0)
 					continue;
 
 				LinkedList<UUID> path = new LinkedList<UUID>();
-				Collections.copy(path, n.path);
+				path.addAll(n.path);
 				path.add(p.getKey());
 
 				q.add(new GraphNode(p.getKey(), n.cost + p.getValue(), path));
