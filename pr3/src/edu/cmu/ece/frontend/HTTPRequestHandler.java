@@ -122,6 +122,11 @@ public class HTTPRequestHandler {
 				HTTPResponses.sendNetworkMap(request, textOut);
 				return;
 			}
+			
+			if (requested.startsWith("rank", 5)) {
+				HTTPResponses.sendMapResponse(requested.substring(9), request, textOut);
+				return;
+			}
 
 			// Next check if we need to configure routing settings
 			if (requested.startsWith("config?", 5)) {
@@ -253,7 +258,7 @@ public class HTTPRequestHandler {
 			router.addContentToGraph(path, new GraphPeer(UUID.fromString(uuid),
 					Integer.parseInt(rate)));
 
-			// TODO: Should we validat on whether or not the neighbor exists?
+			// TODO: Should we validate on whether or not the neighbor exists?
 
 			System.out.println((NetworkGraph.getInstance().getNeighbor(
 					UUID.fromString(uuid)) == null) ? "No neighbor with that UUID Exists"

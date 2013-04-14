@@ -23,8 +23,8 @@ import edu.cmu.ece.routing.NetworkGraph;
  */
 public class ParseConf {
 
-	private boolean hasUUID = false;
-	private String name = "";
+	private UUID myUUID = null;
+	private String name = null;
 	private int frontendPort;
 	private int backendPort;
 	private int peerCount = 0;
@@ -67,19 +67,38 @@ public class ParseConf {
 			e.printStackTrace();
 		}
 
-		// Generate new UUID if needed.
-		if (!hasUUID) {
-			UUID newUUID = UUID.randomUUID();
-			NetworkGraph.getInstance().setUUID(newUUID);
+		if (myUUID != null) {
+			if (name == null) {
+				name = myUUID.toString();
+			}
+			
+			NetworkGraph.getInstance().setName(name);
+			NetworkGraph.getInstance().setUUID(myUUID);
+			
+		} else {
+			myUUID = UUID.randomUUID();
+			if (name == null) {
+				name = myUUID.toString();
+			}
+			
+			NetworkGraph.getInstance().setName(name);
+			NetworkGraph.getInstance().setUUID(myUUID);
+			
 			try {
 				PrintWriter out = new PrintWriter(new BufferedWriter(
 						new FileWriter(targetName, true)));
-				out.println("uuid = " + newUUID);
+				out.println("uuid = " + myUUID);
 				out.close();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+			
 		}
+		
+		if (name != null) {
+			NetworkGraph.getInstance().setName(name);
+		} 
+
 
 	}
 
@@ -101,12 +120,11 @@ public class ParseConf {
 
 		// Set correct field based on key-value pair
 		if (key.equals("uuid")) {
-			NetworkGraph.getInstance().setUUID(UUID.fromString(val));
-			hasUUID = true;
+			myUUID = UUID.fromString(val);
+			NetworkGraph.getInstance().setUUID(myUUID);
 			System.out.println("UUID: " + val);
 		} else if (key.equals("name")) {
 			name = val;
-			NetworkGraph.getInstance().setName(val);
 			System.out.println("name: " + val);
 		} else if (key.equals("frontend_port")) {
 			frontendPort = Integer.parseInt(val);

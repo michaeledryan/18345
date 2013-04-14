@@ -270,4 +270,19 @@ public class HTTPResponses {
 		out.flush();
 
 	}
+
+	public static void sendMapResponse(String substring,
+			HTTPRequestPacket request, PrintWriter textOut) {
+		String header = "HTTP/1.1 200 OK\r\n";
+		String connection = request.getHeader("Connection");
+
+		if (connection != null && connection.equalsIgnoreCase("close"))
+			header += "Connection: Close\r\n";
+		else
+			header += "Connection: Keep-Alive\r\n";
+		header += "Date: " + HTTPResponseHeader.formatDate(new Date()) + "\r\n";
+		
+		String page = NetworkGraph.getInstance().getRank(substring);
+		
+	}
 }

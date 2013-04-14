@@ -8,6 +8,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -180,8 +181,10 @@ public class NetworkGraph {
 	 */
 	public boolean addAjacency(UUID node, UUID edge, int distance, String name) {
 		Map<UUID, Integer> nodeMap;
-		NameAndNeighbors nans;
 		boolean changed = true; // Assume the value changed, check below
+		System.out.println("ADDING ADJACENCY");
+		System.out.println("UUID: " + node);
+		System.out.println("name: " + name);
 
 		if (adjacencies.containsKey(node)) {
 			nodeMap = adjacencies.get(node).getNeighbors();
@@ -204,8 +207,8 @@ public class NetworkGraph {
 	/*
 	 * Returns a set of adjacent peers to a given node
 	 */
-	public Map<UUID, Integer> getAdjacencies(UUID node) {
-		return adjacencies.get(node).getNeighbors();
+	public NameAndNeighbors getAdjacencies(UUID node) {
+		return adjacencies.get(node);
 	}
 
 	/*
@@ -227,7 +230,7 @@ public class NetworkGraph {
 		// that nodes edges
 		for (Map.Entry<UUID, NameAndNeighbors> node : adjacencies.entrySet()) {
 			Map<String, Integer> edges = new HashMap<String, Integer>();
-			networkMap.put(node.getKey().toString(), edges);
+			networkMap.put(node.getValue().getName(), edges);
 
 			// Loop over every edge for a node, add it to map, if its distance
 			// is not infinity
@@ -251,9 +254,9 @@ public class NetworkGraph {
 	private class GraphNode implements Comparable<GraphNode> {
 		public UUID uuid;
 		public int cost;
-		public LinkedList<UUID> path;
+		public List<UUID> path;
 
-		public GraphNode(UUID uuid, int cost, LinkedList<UUID> path) {
+		public GraphNode(UUID uuid, int cost, List<UUID> path) {
 			this.uuid = uuid;
 			this.cost = cost;
 			this.path = path;
@@ -262,6 +265,10 @@ public class NetworkGraph {
 		@Override
 		public int compareTo(GraphNode o) {
 			return cost - o.cost;
+		}
+
+		public String toJSON() {
+			return "{" + uuid.toString() + ":" + cost + "}";
 		}
 	}
 
@@ -276,6 +283,7 @@ public class NetworkGraph {
 			this.cost = cost;
 			this.path = path;
 		}
+
 	}
 
 	public Map<UUID, CostPathPair> getShortestPaths() {
@@ -296,7 +304,7 @@ public class NetworkGraph {
 			paths.put(n.uuid, new CostPathPair(n.cost, n.path));
 
 			// Follow every edge and add to queue
-			Map<UUID, Integer> edges = getAdjacencies(n.uuid);
+			Map<UUID, Integer> edges = getAdjacencies(n.uuid).getNeighbors();
 			for (Map.Entry<UUID, Integer> p : edges.entrySet()) {
 				// Discard infinity
 				if (p.getValue() < 0)
@@ -312,5 +320,22 @@ public class NetworkGraph {
 
 		// Finally, return our results
 		return paths;
+	}
+
+	public String getRank(String path) {
+		Set<GraphPeer> peersWithFile = RoutingTable.getInstance()
+				.getContentFromGraph(path);
+		Map<UUID, CostPathPair> shortestPaths = getShortestPaths();
+		List<String> result = new ArrayList<String>();
+
+		for (GraphPeer peer : peersWithFile) {
+			if (shortestPaths.containsKey(peer.getUuid())) {
+				CostPathPair tmp = shortestPaths.get(peer.getUuid());
+				result.add(new GraphNode(tmp.path.get(tmp.path.size() - 1),
+						tmp.cost, tmp.path).toJSON());
+			}
+		}
+
+		return result.toString();
 	}
 }

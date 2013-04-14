@@ -16,7 +16,7 @@ public class RoutingTable {
 	private Map<Integer, HTTPClientHandler> idsToClientHandlers = new ConcurrentHashMap<Integer, HTTPClientHandler>();
 	private Map<PeerData, UDPRequestHandler> peersToRequests = new ConcurrentHashMap<PeerData, UDPRequestHandler>();
 	private Map<String, Integer> clientsToBitRates = new ConcurrentHashMap<String, Integer>();
-	private Map<String, GraphPeer> pathsToUUIDS = new ConcurrentHashMap<String, GraphPeer>();
+	private Map<String, Set<GraphPeer>> pathsToUUIDS = new ConcurrentHashMap<String, Set<GraphPeer>>();
 	
 		
 	/**
@@ -178,12 +178,27 @@ public class RoutingTable {
 		clientsToBitRates.remove(new Integer(clientID));
 	}
 	
-	public GraphPeer removeContentFromGraph(String path) {
+	public Set<GraphPeer> removeContentFromGraph(String path) {
 		return pathsToUUIDS.remove(path);
 	}
 	
+	public Set<GraphPeer> getContentFromGraph(String path) {
+		return pathsToUUIDS.get(path);
+	}
+	
 	public GraphPeer addContentToGraph(String path, GraphPeer peer) {
-		return pathsToUUIDS.put(path, peer);
+		synchronized (pathsToUUIDS) {
+			Set<GraphPeer> peers;
+			if (pathsToUUIDS.containsKey(path)) {
+				peers = pathsToUUIDS.get(path);
+			} else {
+				peers = new ConcurrentSkipListSet<GraphPeer>();
+				pathsToUUIDS.put(path, peers);
+			}
+			peers.add(peer);
+
+			return peer;
+		}
 	}
 	
 	public boolean checkGraphPath(String path) {
