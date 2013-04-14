@@ -470,14 +470,27 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		return new PeerData(host, frontendPort, backendPort, 0);
 	}
 
-	public Map<String, String> getJSONMap() {
-		Map<String, String> result = new HashMap<String, String>();
-		result.put("uuid", uuid.toString());
-		result.put("name", name);
-		result.put("host", host);
-		result.put("frontend", Integer.toString(frontendPort));
-		result.put("backend", Integer.toString(backendPort));
-		result.put("metric", Integer.toString(distance));
+	/*
+	 * Return a class containing only the relevant info for JSON results
+	 */
+	public class NeighborJSON {
+		public String uuid;
+		public String name;
+		public String host;
+		public int frontend;
+		public int backend;
+		public int metric;
+	}
+
+	public NeighborJSON getJSONClass() {
+		NeighborJSON result = new NeighborJSON();
+		result.uuid = uuid.toString();
+		result.name = name;
+		result.host = host;
+		result.frontend = frontendPort;
+		result.backend = backendPort;
+		result.metric = distance;
+
 		return result;
 	}
 

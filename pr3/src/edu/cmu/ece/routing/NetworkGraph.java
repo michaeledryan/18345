@@ -13,6 +13,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.gson.Gson;
 
+import edu.cmu.ece.routing.Neighbor.NeighborJSON;
+
 public class NetworkGraph {
 	private static NetworkGraph instance = null;
 
@@ -129,11 +131,11 @@ public class NetworkGraph {
 	 * @return a string containing JSONified fields.
 	 */
 	public String getNeighborJSONforWeb() {
-		ArrayList<Map<String, String>> neighborMaps = new ArrayList<>();
+		ArrayList<NeighborJSON> neighborMaps = new ArrayList<>();
 		for (Neighbor neighbor : neighbors.values()) {
 			// If this node is connected, add it
 			if (neighbor.getDistanceMetric() >= 0)
-				neighborMaps.add(neighbor.getJSONMap());
+				neighborMaps.add(neighbor.getJSONClass());
 		}
 
 		Gson gson = new Gson();
@@ -146,10 +148,6 @@ public class NetworkGraph {
 	 */
 	public void addNeighbor(Neighbor n) {
 		neighbors.put(n.getUuid(), n);
-
-		// Also add neighbor to network graph
-		// Moved to neighbor itself
-		// adjacencies.get(myUUID).put(n.getUuid(), n.getDistanceMetric());
 	}
 
 	/*
