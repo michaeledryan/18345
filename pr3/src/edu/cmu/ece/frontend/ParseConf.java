@@ -153,7 +153,7 @@ public class ParseConf {
 			int peerMetric = Integer.parseInt(peerInfo[4]);
 			
 			NetworkGraph.getInstance().addNeighbor(new Neighbor(UUID.fromString(uuid), 
-					hostname, peerFrontPort, peerBackPort, peerMetric));
+					hostname, peerFrontPort, peerBackPort, peerMetric, false));
 
 			System.out.println("Peer with:");
 			System.out.println("UUID: " + uuid);

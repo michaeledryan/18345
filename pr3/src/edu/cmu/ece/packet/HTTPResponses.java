@@ -271,8 +271,8 @@ public class HTTPResponses {
 
 	}
 
-	public static void sendMapResponse(String substring,
-			HTTPRequestPacket request, PrintWriter textOut) {
+	public static void sendRankResponse(String substring,
+			HTTPRequestPacket request, PrintWriter out) {
 		String header = "HTTP/1.1 200 OK\r\n";
 		String connection = request.getHeader("Connection");
 
@@ -283,6 +283,16 @@ public class HTTPResponses {
 		header += "Date: " + HTTPResponseHeader.formatDate(new Date()) + "\r\n";
 		
 		String page = NetworkGraph.getInstance().getRank(substring);
+		
+		header += "Content-Type: text/html\r\n";
+		header += "Content-Length: " + page.length() + "\r\n";
+		header += "\r\n";
+		
+		System.out.println(page);
+		
+		out.write(header);
+		out.write(page);
+		out.flush();
 		
 	}
 }

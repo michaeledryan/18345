@@ -2,7 +2,6 @@ package edu.cmu.ece.routing;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -13,8 +12,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.gson.Gson;
-
-import edu.cmu.ece.frontend.NameAndNeighbors;
 
 public class NetworkGraph {
 	private static NetworkGraph instance = null;
@@ -27,7 +24,10 @@ public class NetworkGraph {
 	int nextSeqNum = 0;
 
 	// Keeps track of our entire network state graph
-	private Map<UUID, NameAndNeighbors> adjacencies = new ConcurrentHashMap<UUID, NameAndNeighbors>();
+
+	private Map<UUID, Map<UUID, Integer>> adjacencies = new ConcurrentHashMap<UUID, Map<UUID, Integer>>();
+	private Map<UUID, String> nameTable = new ConcurrentHashMap<UUID, String>();
+
 
 	// Stats for this node
 	private UUID myUUID;
@@ -50,8 +50,6 @@ public class NetworkGraph {
 	 * Private constructor for a singleton.
 	 */
 	private NetworkGraph() {
-		// Add ourself to the network graph
-		// adjacencies.put(myUUID, new ConcurrentSkipListSet<Peer>());
 	}
 
 	/**
@@ -79,12 +77,12 @@ public class NetworkGraph {
 
 	public void setUUID(UUID newUUID) {
 		myUUID = newUUID;
-		adjacencies.put(myUUID, new NameAndNeighbors(myName,
-				new HashMap<UUID, Integer>()));
+		adjacencies.put(myUUID, new HashMap<UUID, Integer>());
 	}
 
 	public void setName(String newName) {
 		myName = newName;
+		nameTable.put(myUUID, myName);
 	}
 
 	public void setFrontendPort(int frontendPort) {
@@ -123,7 +121,7 @@ public class NetworkGraph {
 	/**
 	 * Get all neighbors
 	 */
-	public Map<UUID, NameAndNeighbors> getAllNeighbors() {
+	public Map<UUID, Map<UUID, Integer>> getAllNeighbors() {
 		return adjacencies;
 	}
 
@@ -136,8 +134,13 @@ public class NetworkGraph {
 		ArrayList<Map<String, String>> neighborMaps = new ArrayList<>();
 		for (Neighbor neighbor : neighbors.values()) {
 			// If this node is connected, add it
-			if (neighbor.getDistanceMetric() >= 0)
+			System.out.println("\t DISTANCE FOR " + neighbor.getUuid());
+			System.out.println(neighbor.getDistanceMetric());
+			if (neighbor.getDistanceMetric() >= 0) {
 				neighborMaps.add(neighbor.getJSONMap());
+			}
+				
+			
 		}
 
 		Gson gson = new Gson();
@@ -179,15 +182,12 @@ public class NetworkGraph {
 	 * adjacency graph. Replaces any node's neighbor with the new peer so as to
 	 * make maintaining distances easy. Returns true if we have changed
 	 */
-	public boolean addAjacency(UUID node, UUID edge, int distance, String name) {
+	public boolean addAdjacency(UUID node, UUID edge, int distance) {
 		Map<UUID, Integer> nodeMap;
 		boolean changed = true; // Assume the value changed, check below
-		System.out.println("ADDING ADJACENCY");
-		System.out.println("UUID: " + node);
-		System.out.println("name: " + name);
 
 		if (adjacencies.containsKey(node)) {
-			nodeMap = adjacencies.get(node).getNeighbors();
+			nodeMap = adjacencies.get(node);
 
 			// Replace and determine whether the value changed
 			Integer oldInt = nodeMap.put(edge, new Integer(distance));
@@ -198,7 +198,7 @@ public class NetworkGraph {
 		} else {
 			nodeMap = new HashMap<UUID, Integer>();
 			nodeMap.put(edge, distance);
-			adjacencies.put(node, new NameAndNeighbors(name, nodeMap));
+			adjacencies.put(node, nodeMap);
 		}
 
 		return changed;
@@ -207,15 +207,44 @@ public class NetworkGraph {
 	/*
 	 * Returns a set of adjacent peers to a given node
 	 */
-	public NameAndNeighbors getAdjacencies(UUID node) {
+	public Map<UUID, Integer> getAdjacencies(UUID node) {
 		return adjacencies.get(node);
 	}
 
 	/*
-	 * Removes a node from th enetwork graph
+	 * Removes a node from the network graph, and also clears any unreachable
+	 * nodes.
 	 */
 	public void removeAdjacencyNode(UUID node) {
 		adjacencies.remove(node);
+
+		// Then traverse graph to find what we can't see
+		Set<UUID> invisibleNodes = adjacencies.keySet();
+		Set<UUID> visibleNodes = getShortestPaths().keySet();
+		invisibleNodes.removeAll(visibleNodes);
+
+		// Remove these from our graph
+		for (UUID n : invisibleNodes)
+			adjacencies.remove(n);
+	}
+
+	/*
+	 * Update the name table
+	 */
+	public void addName(UUID node, String name) {
+		nameTable.put(node, name);
+	}
+
+	public String getName(UUID node) {
+		String name = nameTable.get(node);
+		if (name == null)
+			return node.toString();
+		else
+			return name;
+	}
+
+	public Map<UUID, String> getAllNames() {
+		return nameTable;
 	}
 
 	/**
@@ -228,16 +257,16 @@ public class NetworkGraph {
 
 		// Loop over every node in the network. For each node create a map of
 		// that nodes edges
-		for (Map.Entry<UUID, NameAndNeighbors> node : adjacencies.entrySet()) {
+		for (Map.Entry<UUID, Map<UUID, Integer>> node : adjacencies.entrySet()) {
 			Map<String, Integer> edges = new HashMap<String, Integer>();
-			networkMap.put(node.getValue().getName(), edges);
+			networkMap.put(getName(node.getKey()), edges);
 
 			// Loop over every edge for a node, add it to map, if its distance
 			// is not infinity
-			for (Map.Entry<UUID, Integer> edge : node.getValue().getNeighbors()
+			for (Map.Entry<UUID, Integer> edge : node.getValue()
 					.entrySet()) {
 				if (edge.getValue().intValue() >= 0)
-					edges.put(edge.getKey().toString(), edge.getValue()
+					edges.put(getName(edge.getKey()), edge.getValue()
 							.intValue());
 			}
 		}
@@ -268,7 +297,7 @@ public class NetworkGraph {
 		}
 
 		public String toJSON() {
-			return "{" + uuid.toString() + ":" + cost + "}";
+			return "{\"" + getName(uuid) + "\":" + cost + "}";
 		}
 	}
 
@@ -304,14 +333,17 @@ public class NetworkGraph {
 			paths.put(n.uuid, new CostPathPair(n.cost, n.path));
 
 			// Follow every edge and add to queue
-			Map<UUID, Integer> edges = getAdjacencies(n.uuid).getNeighbors();
+
+			Map<UUID, Integer> edges = getAdjacencies(n.uuid);
+			if (edges == null)
+				continue;
 			for (Map.Entry<UUID, Integer> p : edges.entrySet()) {
 				// Discard infinity
 				if (p.getValue() < 0)
 					continue;
 
 				LinkedList<UUID> path = new LinkedList<UUID>();
-				Collections.copy(path, n.path);
+				path.addAll(n.path);
 				path.add(p.getKey());
 
 				q.add(new GraphNode(p.getKey(), n.cost + p.getValue(), path));
@@ -335,7 +367,8 @@ public class NetworkGraph {
 						tmp.cost, tmp.path).toJSON());
 			}
 		}
-
+		
+		System.out.println("return?");
 		return result.toString();
 	}
 }

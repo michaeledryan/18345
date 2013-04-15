@@ -122,9 +122,11 @@ public class HTTPRequestHandler {
 				HTTPResponses.sendNetworkMap(request, textOut);
 				return;
 			}
-			
+
 			if (requested.startsWith("rank", 5)) {
-				HTTPResponses.sendMapResponse(requested.substring(9), request, textOut);
+				System.out.println(requested.substring(10));
+				HTTPResponses.sendRankResponse(requested.substring(10),
+						request, textOut);
 				return;
 			}
 
@@ -203,7 +205,7 @@ public class HTTPRequestHandler {
 
 		Neighbor n = new Neighbor(UUID.fromString(uuid), host,
 				Integer.parseInt(frontend), Integer.parseInt(backend),
-				Integer.parseInt(backend));
+				Integer.parseInt(metric), true);
 		graph.addNeighbor(n);
 
 		HTTPResponses.sendAddNeighborMessage(request, textOut, uuid, host,
@@ -260,9 +262,10 @@ public class HTTPRequestHandler {
 
 			// TODO: Should we validate on whether or not the neighbor exists?
 
-			System.out.println((NetworkGraph.getInstance().getNeighbor(
-					UUID.fromString(uuid)) == null) ? "No neighbor with that UUID Exists"
-					: "Neighbor found");
+			System.out
+					.println((NetworkGraph.getInstance().getNeighbor(
+							UUID.fromString(uuid)) == null) ? "No neighbor with that UUID Exists"
+							: "Neighbor found");
 
 			HTTPResponses.sendPeerUUIDConfigMessage(path, request, textOut,
 					uuid, rate);
@@ -399,9 +402,13 @@ public class HTTPRequestHandler {
 		if (n == null) {
 			System.err
 					.println("\tThe requesting neighbor is not in our table.");
-		} else {
-			n.receivePeering(socket, textIn, textOut);
+			n = new Neighbor(uuid, request.getHeader("host"),
+					Integer.parseInt(request.getHeader("frontend")),
+					Integer.parseInt(request.getHeader("backend")),
+					Integer.parseInt(request.getHeader("metric")), false);
+			NetworkGraph.getInstance().addNeighbor(n);
 		}
+		n.receivePeering(socket, textIn, textOut);
 
 		// Kill this thread - this socket has been passed to the neighbor's
 		// own thread

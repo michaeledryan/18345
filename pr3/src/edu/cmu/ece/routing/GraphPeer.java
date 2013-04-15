@@ -8,7 +8,7 @@ import java.util.UUID;
  * @author michaels
  *
  */
-public class GraphPeer {
+public class GraphPeer implements Comparable<GraphPeer>{
 
 	private UUID uuid;
 	private int bitrate;
@@ -32,6 +32,11 @@ public class GraphPeer {
 
 	public void setUuid(UUID uuid) {
 		this.uuid = uuid;
+	}
+
+	@Override
+	public int compareTo(GraphPeer o) {
+		return uuid.compareTo(o.uuid);
 	}
 	
 	
