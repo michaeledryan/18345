@@ -26,14 +26,11 @@ import com.google.gson.reflect.TypeToken;
 import edu.cmu.ece.backend.PeerData;
 
 public class Neighbor implements Comparable<Neighbor>, Runnable {
-	private static int nextId = 1;
 	private static int peerTimeout = 1000; // ms
 	private static int connectTimeout = 10000; // ms
 
-	private RoutingTable router = RoutingTable.getInstance();
 	private NetworkGraph network = NetworkGraph.getInstance();
 
-	private int id;
 	private UUID uuid;
 	private String name;
 	private String host;
@@ -54,7 +51,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 	public Neighbor(UUID newUuid, String newHost, int newFrontendPort,
 			int newBackendPort, int newMetric, boolean requestPeering) {
-		id = nextId++;
 
 		checkOnce = requestPeering;
 		uuid = newUuid;
@@ -78,7 +74,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	 * the lesser UUID requests a connection
 	 */
 	public void requestPeering() {
-		System.out.println("Requesting peering relationship with: " + uuid);
 
 		boolean connected = false;
 		while (!connected) {
@@ -106,16 +101,11 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 			} catch (UnknownHostException e) {
 				System.err.println("Invalid neighbor address.");
 			} catch (ConnectException e) {
-				// Do nothing but retry to connect after a delay
-				// TODO: Take it out of the list of neighbors?
-				// network.removeNeighbor(uuid);
-				System.out.println("Couldn't find. Waiting...");
 				try {
 					Thread.sleep(connectTimeout);
 				} catch (InterruptedException e1) {
 					// Do nothing
 				}
-				System.out.println("Trying again...");
 			} catch (IOException e) {
 				System.err
 						.println("Could not read/write to socket stream for neighbors.");
@@ -129,7 +119,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	 */
 	public void receivePeering(Socket socket, BufferedReader read,
 			PrintWriter write) {
-		System.out.println("\tEstablishing peering relationship.");
 		connection = socket;
 		in = read;
 		out = write;
@@ -156,7 +145,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		}
 
 		// Configure connection
-		System.out.println("\tPeer connection established.");
 		try {
 			connection.setSoTimeout(peerTimeout);
 		} catch (SocketException e1) {
@@ -166,7 +154,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		// Update our distance metric
 		distance = originalDistance;
 		network.addAdjacency(network.getUUID(), uuid, distance);
-		
+
 		// Send our name
 		synchronized (commLock) {
 			out.write("Name " + network.getName());
@@ -273,9 +261,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 					// Parse seqNum from update header
 					int seqNum = Integer.parseInt(message.split(" ")[1]);
-					System.out
-							.println("Neighbor has sent updates with seqNum: "
-									+ seqNum);
 
 					// Read in path
 					String pathLine = in.readLine();
@@ -311,20 +296,13 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					}
 				} else {
 					// Invalid message
-					System.err.println("Neighbor sent us invalid message: '"
-							+ message + "'");
 				}
 			} catch (SocketTimeoutException e) {
-				System.err
-						.println("Neighbor hasn't reported back, may be dead.");
 				timer.cancel();
 				break;
-				// TODO: update our graph - how do we do that?
-				// TODO: try to reconnect periodically?
 
 			} catch (IOException e) {
 				// We can no longer send to this peer.
-				System.err.println("Couldn't read incoming peer message: " + e);
 				timer.cancel();
 				break;
 			}
@@ -332,7 +310,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 		// Close socket
 		try {
-			System.out.println("Disconnecting from neighbor.");
 			connection.close();
 			connection = null;
 		} catch (IOException e) {
@@ -470,14 +447,27 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		return new PeerData(host, frontendPort, backendPort, 0);
 	}
 
-	public Map<String, String> getJSONMap() {
-		Map<String, String> result = new HashMap<String, String>();
-		result.put("uuid", uuid.toString());
-		result.put("name", name);
-		result.put("host", host);
-		result.put("frontend", Integer.toString(frontendPort));
-		result.put("backend", Integer.toString(backendPort));
-		result.put("metric", Integer.toString(distance));
+	/*
+	 * Return a class containing only the relevant info for JSON results
+	 */
+	public class NeighborJSON {
+		public String uuid;
+		public String name;
+		public String host;
+		public int frontend;
+		public int backend;
+		public int metric;
+	}
+
+	public NeighborJSON getJSONClass() {
+		NeighborJSON result = new NeighborJSON();
+		result.uuid = uuid.toString();
+		result.name = name;
+		result.host = host;
+		result.frontend = frontendPort;
+		result.backend = backendPort;
+		result.metric = distance;
+
 		return result;
 	}
 

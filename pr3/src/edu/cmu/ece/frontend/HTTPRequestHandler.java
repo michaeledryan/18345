@@ -124,7 +124,6 @@ public class HTTPRequestHandler {
 			}
 
 			if (requested.startsWith("rank", 5)) {
-				System.out.println(requested.substring(10));
 				HTTPResponses.sendRankResponse(requested.substring(10),
 						request, textOut);
 				return;
@@ -195,14 +194,6 @@ public class HTTPRequestHandler {
 				uuid = keyValue[1];
 		}
 
-		System.out.println("HTTP Request, client " + clientID);
-		System.out.println("\tConfig request with parameters:");
-		System.out.println("\t\tUUID: " + uuid);
-		System.out.println("\t\tPath: " + host);
-		System.out.println("\t\tBackend: " + backend);
-		System.out.println("\t\tFrontend: " + frontend);
-		System.out.println("\t\tMetric: " + metric);
-
 		Neighbor n = new Neighbor(UUID.fromString(uuid), host,
 				Integer.parseInt(frontend), Integer.parseInt(backend),
 				Integer.parseInt(metric), true);
@@ -237,12 +228,6 @@ public class HTTPRequestHandler {
 
 		if (uuid.equals("")) {
 
-			System.out.println("HTTP Request, client " + clientID);
-			System.out.println("\tConfig request with parameters:");
-			System.out.println("\t\tFile: " + path);
-			System.out.println("\t\tPath: " + host + ":" + port);
-			System.out.println("\t\tBitrate: " + rate);
-
 			PeerData peerdata = new PeerData(host, Integer.parseInt(port),
 					Integer.parseInt(rate), 0);
 			router.addtofileNames(path, peerdata);
@@ -251,21 +236,9 @@ public class HTTPRequestHandler {
 					peerdata);
 
 		} else {
-			System.out.println("HTTP Request, client " + clientID);
-			System.out.println("\tConfig request with parameters:");
-			System.out.println("\t\tFile: " + path);
-			System.out.println("\t\tUUID: " + uuid);
-			System.out.println("\t\tBitrate: " + rate);
 
 			router.addContentToGraph(path, new GraphPeer(UUID.fromString(uuid),
 					Integer.parseInt(rate)));
-
-			// TODO: Should we validate on whether or not the neighbor exists?
-
-			System.out
-					.println((NetworkGraph.getInstance().getNeighbor(
-							UUID.fromString(uuid)) == null) ? "No neighbor with that UUID Exists"
-							: "Neighbor found");
 
 			HTTPResponses.sendPeerUUIDConfigMessage(path, request, textOut,
 					uuid, rate);
@@ -275,10 +248,6 @@ public class HTTPRequestHandler {
 	}
 
 	private void handlePeerConfig(String parameters) {
-		System.out.println("HTTP Request, client " + clientID);
-		System.out.println("\tConfig request with parameters:");
-		System.out.println("\t\t" + parameters);
-
 		int rate = Integer.parseInt(parameters.split("=")[1]);
 
 		router.setBitRate(clientIP, rate);
@@ -296,12 +265,6 @@ public class HTTPRequestHandler {
 		 * Look up file in the routing table. If it isn't found, send a 404
 		 */
 		request.parseRanges(new File(target));
-		System.out.println("HTTP Request, client " + clientID);
-		System.out.println("\tRemote request for: " + target);
-		System.out.println("\tAsking for range: "
-				+ request.getFullRangeString());
-		System.out.println("\tRequesting bitrate: "
-				+ router.getClientBitRate(clientIP));
 		Set<PeerData> peers = router.getPeerData(target);
 		if (peers == null || peers.size() == 0) {
 			HTTPResponses.send404(request, textOut);
@@ -379,10 +342,6 @@ public class HTTPRequestHandler {
 	 */
 	private void handleLocalRequest(File target) {
 		// Generate and write headers to client.
-		System.out.println("HTTP Request, client " + clientID);
-		System.out.println("\tLocal request for: " + target);
-		System.out.println("\tAsking for range: "
-				+ request.getFullRangeString());
 		String header = HTTPResponseHeader.makeHeader(target, request);
 		textOut.write(header);
 		textOut.flush();
@@ -395,13 +354,10 @@ public class HTTPRequestHandler {
 	 * Handles a peering request - gives socket to neighbor and kills thread
 	 */
 	private void handlePeeringRequest(UUID uuid) {
-		System.out.println("Peering request from neighbor: " + uuid);
 
 		// Get the requesting neighbor from our table and peer
 		Neighbor n = graph.getNeighbor(uuid);
 		if (n == null) {
-			System.err
-					.println("\tThe requesting neighbor is not in our table.");
 			n = new Neighbor(uuid, request.getHeader("host"),
 					Integer.parseInt(request.getHeader("frontend")),
 					Integer.parseInt(request.getHeader("backend")),

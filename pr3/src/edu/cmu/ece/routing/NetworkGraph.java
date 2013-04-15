@@ -13,6 +13,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.gson.Gson;
 
+import edu.cmu.ece.routing.Neighbor.NeighborJSON;
+
 public class NetworkGraph {
 	private static NetworkGraph instance = null;
 
@@ -27,7 +29,6 @@ public class NetworkGraph {
 
 	private Map<UUID, Map<UUID, Integer>> adjacencies = new ConcurrentHashMap<UUID, Map<UUID, Integer>>();
 	private Map<UUID, String> nameTable = new ConcurrentHashMap<UUID, String>();
-
 
 	// Stats for this node
 	private UUID myUUID;
@@ -131,16 +132,12 @@ public class NetworkGraph {
 	 * @return a string containing JSONified fields.
 	 */
 	public String getNeighborJSONforWeb() {
-		ArrayList<Map<String, String>> neighborMaps = new ArrayList<>();
+		ArrayList<NeighborJSON> neighborMaps = new ArrayList<>();
 		for (Neighbor neighbor : neighbors.values()) {
 			// If this node is connected, add it
-			System.out.println("\t DISTANCE FOR " + neighbor.getUuid());
-			System.out.println(neighbor.getDistanceMetric());
 			if (neighbor.getDistanceMetric() >= 0) {
-				neighborMaps.add(neighbor.getJSONMap());
+				neighborMaps.add(neighbor.getJSONClass());
 			}
-				
-			
 		}
 
 		Gson gson = new Gson();
@@ -153,10 +150,6 @@ public class NetworkGraph {
 	 */
 	public void addNeighbor(Neighbor n) {
 		neighbors.put(n.getUuid(), n);
-
-		// Also add neighbor to network graph
-		// Moved to neighbor itself
-		// adjacencies.get(myUUID).put(n.getUuid(), n.getDistanceMetric());
 	}
 
 	/*
@@ -263,8 +256,7 @@ public class NetworkGraph {
 
 			// Loop over every edge for a node, add it to map, if its distance
 			// is not infinity
-			for (Map.Entry<UUID, Integer> edge : node.getValue()
-					.entrySet()) {
+			for (Map.Entry<UUID, Integer> edge : node.getValue().entrySet()) {
 				if (edge.getValue().intValue() >= 0)
 					edges.put(getName(edge.getKey()), edge.getValue()
 							.intValue());
@@ -360,15 +352,18 @@ public class NetworkGraph {
 		Map<UUID, CostPathPair> shortestPaths = getShortestPaths();
 		List<String> result = new ArrayList<String>();
 
-		for (GraphPeer peer : peersWithFile) {
-			if (shortestPaths.containsKey(peer.getUuid())) {
-				CostPathPair tmp = shortestPaths.get(peer.getUuid());
-				result.add(new GraphNode(tmp.path.get(tmp.path.size() - 1),
-						tmp.cost, tmp.path).toJSON());
-			}
+		if (peersWithFile == null){
+			return "[]";
 		}
-		
-		System.out.println("return?");
+
+			for (GraphPeer peer : peersWithFile) {
+				if (shortestPaths.containsKey(peer.getUuid())) {
+					CostPathPair tmp = shortestPaths.get(peer.getUuid());
+					result.add(new GraphNode(tmp.path.get(tmp.path.size() - 1),
+							tmp.cost, tmp.path).toJSON());
+				}
+			}
+
 		return result.toString();
 	}
 }

@@ -9,7 +9,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 import edu.cmu.ece.routing.Neighbor;
@@ -25,10 +24,9 @@ public class ParseConf {
 
 	private UUID myUUID = null;
 	private String name = null;
-	private int frontendPort;
-	private int backendPort;
-	private int peerCount = 0;
-	private List<String> peerUUIDs = new ArrayList<String>();
+	private int frontendPort = 18345;
+	private int backendPort = 18346;
+	private ArrayList<NeighborContainer> neighborsToAdd = new ArrayList<NeighborContainer>();
 
 	/**
 	 * Constructor. Parses all data and sets private fields.
@@ -50,20 +48,16 @@ public class ParseConf {
 		try {
 			confReader = new BufferedReader(new FileReader(conf));
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
 		String line;
-
-		System.out.println("Parsing " + targetName + "...");
 
 		try {
 			while ((line = confReader.readLine()) != null) {
 				parseLine(line);
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
@@ -71,19 +65,22 @@ public class ParseConf {
 			if (name == null) {
 				name = myUUID.toString();
 			}
-			
-			NetworkGraph.getInstance().setName(name);
+
 			NetworkGraph.getInstance().setUUID(myUUID);
+			NetworkGraph.getInstance().setName(name);
 			
+
 		} else {
 			myUUID = UUID.randomUUID();
 			if (name == null) {
+				System.out.print("NAME IS NULL");
 				name = myUUID.toString();
 			}
-			
-			NetworkGraph.getInstance().setName(name);
+
 			NetworkGraph.getInstance().setUUID(myUUID);
+			NetworkGraph.getInstance().setName(name);
 			
+
 			try {
 				PrintWriter out = new PrintWriter(new BufferedWriter(
 						new FileWriter(targetName, true)));
@@ -92,13 +89,18 @@ public class ParseConf {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			
+
 		}
-		
+
 		if (name != null) {
 			NetworkGraph.getInstance().setName(name);
-		} 
+		}
 
+		for (NeighborContainer nc : neighborsToAdd) {
+			NetworkGraph.getInstance().addNeighbor(
+					new Neighbor(nc.uuid, nc.hostname, nc.peerFrontPort,
+							nc.peerBackPort, nc.peerMetric, false));
+		}
 
 	}
 
@@ -122,22 +124,14 @@ public class ParseConf {
 		if (key.equals("uuid")) {
 			myUUID = UUID.fromString(val);
 			NetworkGraph.getInstance().setUUID(myUUID);
-			System.out.println("UUID: " + val);
 		} else if (key.equals("name")) {
 			name = val;
-			System.out.println("name: " + val);
 		} else if (key.equals("frontend_port")) {
 			frontendPort = Integer.parseInt(val);
-			System.out.println("frontendPort: " + val);
 		} else if (key.equals("backend_port")) {
 			backendPort = Integer.parseInt(val);
-			System.out.println("backendPort: " + val);
 		} else if (key.equals("content_dir")) {
 			HTTPRequestHandler.setContentPath(val);
-			System.out.println("content path: " + val);
-		} else if (key.equals("peer_count")) {
-			peerCount = Integer.parseInt(val);
-			System.out.println("peer count: " + val);
 		} else if (key.matches("peer_\\d*")) {
 			String[] peerInfo = val.split(",");
 			if (peerInfo.length != 5) {
@@ -151,18 +145,29 @@ public class ParseConf {
 			int peerFrontPort = Integer.parseInt(peerInfo[2]);
 			int peerBackPort = Integer.parseInt(peerInfo[3]);
 			int peerMetric = Integer.parseInt(peerInfo[4]);
-			
-			NetworkGraph.getInstance().addNeighbor(new Neighbor(UUID.fromString(uuid), 
-					hostname, peerFrontPort, peerBackPort, peerMetric, false));
 
-			System.out.println("Peer with:");
-			System.out.println("UUID: " + uuid);
-			System.out.println("hostname: " + hostname);
-			System.out.println("frontPort: " + peerFrontPort);
-			System.out.println("backPort: " + peerBackPort);
-			System.out.println("metric: " + peerMetric);
+			neighborsToAdd.add(new NeighborContainer(UUID.fromString(uuid),
+					hostname, peerFrontPort, peerBackPort, peerMetric));
 
 		}
+	}
+
+	private class NeighborContainer {
+		public UUID uuid;
+		public String hostname;
+		public int peerFrontPort;
+		public int peerBackPort;
+		public int peerMetric;
+
+		public NeighborContainer(UUID uuid, String hostname, int peerFrontPort,
+				int peerBackPort, int peerMetric) {
+			this.uuid = uuid;
+			this.hostname = hostname;
+			this.peerFrontPort = peerFrontPort;
+			this.peerBackPort = peerBackPort;
+			this.peerMetric = peerMetric;
+		}
+
 	}
 
 	public int getBackendPort() {
