@@ -213,7 +213,7 @@ public class HTTPResponses {
 
 		String page = NetworkGraph.getInstance().getNeighborJSONforWeb();
 		
-		header += "Content-Type: text/html\r\n";
+		header += "Content-Type: application/json\r\n";
 		header += "Content-Length: " + page.length() + "\r\n";
 		header += "\r\n";
 		
@@ -235,7 +235,7 @@ public class HTTPResponses {
 
 		String page = NetworkGraph.getInstance().getNetworkMapJSONforWeb();
 
-		header += "Content-Type: text/html\r\n";
+		header += "Content-Type: application/json\r\n";
 		header += "Content-Length: " + page.length() + "\r\n";
 		header += "\r\n";
 

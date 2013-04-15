@@ -8,8 +8,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 import edu.cmu.ece.routing.Neighbor;
@@ -22,13 +20,9 @@ import edu.cmu.ece.routing.NetworkGraph;
  * 
  */
 public class ParseConf {
-
 	private boolean hasUUID = false;
-	private String name = "";
 	private int frontendPort;
 	private int backendPort;
-	private int peerCount = 0;
-	private List<String> peerUUIDs = new ArrayList<String>();
 
 	/**
 	 * Constructor. Parses all data and sets private fields.
@@ -105,7 +99,6 @@ public class ParseConf {
 			hasUUID = true;
 			System.out.println("UUID: " + val);
 		} else if (key.equals("name")) {
-			name = val;
 			NetworkGraph.getInstance().setName(val);
 			System.out.println("name: " + val);
 		} else if (key.equals("frontend_port")) {
@@ -117,9 +110,6 @@ public class ParseConf {
 		} else if (key.equals("content_dir")) {
 			HTTPRequestHandler.setContentPath(val);
 			System.out.println("content path: " + val);
-		} else if (key.equals("peer_count")) {
-			peerCount = Integer.parseInt(val);
-			System.out.println("peer count: " + val);
 		} else if (key.matches("peer_\\d*")) {
 			String[] peerInfo = val.split(",");
 			if (peerInfo.length != 5) {

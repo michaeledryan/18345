@@ -26,14 +26,11 @@ import com.google.gson.reflect.TypeToken;
 import edu.cmu.ece.backend.PeerData;
 
 public class Neighbor implements Comparable<Neighbor>, Runnable {
-	private static int nextId = 1;
 	private static int peerTimeout = 1000; // ms
 	private static int connectTimeout = 10000; // ms
 
-	private RoutingTable router = RoutingTable.getInstance();
 	private NetworkGraph network = NetworkGraph.getInstance();
 
-	private int id;
 	private UUID uuid;
 	private String name;
 	private String host;
@@ -55,8 +52,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 	public Neighbor(UUID newUuid, String newHost, int newFrontendPort,
 			int newBackendPort, int newMetric) {
-		id = nextId++;
-
 		uuid = newUuid;
 		name = uuid.toString();
 		frontendPort = newFrontendPort;
