@@ -209,22 +209,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 					handleUpdates(seqNum);
 				} else if (message.startsWith("Gossip ")) {
-					// Parse our header
-					String file = in.readLine();
-					String type = message.split(" ")[1];
-					int ttl = Integer.parseInt(message.split(" ")[2]);
-
-					// Handle our message
-					handleGossip(file);
-
-					// Send our reply if necessary
-					if (type.equals("request")) {
-						sendGossipReply(file, ttl);
-					} else if (type.equals("reply")) {
-						// TODO: nothing?
-					}
-
-					// TODO: if we don't have a gossiper, we must create one
+					handleGossip(message);
 				} else {
 					// Invalid message
 				}
@@ -355,18 +340,33 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		}
 	}
 
-	private void handleGossip(String file) throws IOException {
+	private void handleGossip(String message)
+			throws IOException {
 		// Prep JSON
 		Gson gson = new Gson();
-		Type type = new TypeToken<HashSet<UUID>>() {
+		Type setType = new TypeToken<HashSet<UUID>>() {
 		}.getType();
 
+		// Parse our header
+		String type = message.split(" ")[1];
+		int ttl = Integer.parseInt(message.split(" ")[2]);
+
 		// Parse in our data from the message
+		String file = in.readLine();
 		String dataString = in.readLine();
-		Set<UUID> nodes = gson.fromJson(dataString, type);
+		Set<UUID> nodes = gson.fromJson(dataString, setType);
 
 		// Add the nodes to our table
 		network.addNodeSetForFile(file, nodes);
+
+		// Send our reply if necessary
+		if (type.equals("request")) {
+			sendGossipReply(file, ttl);
+		} else if (type.equals("reply")) {
+			// TODO: nothing?
+		}
+
+		// TODO: if we don't have a gossiper, we must create one
 	}
 
 	/*
