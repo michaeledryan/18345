@@ -10,6 +10,7 @@ import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 import com.google.gson.Gson;
 
@@ -32,15 +33,15 @@ public class NetworkGraph {
 	// Keeps track of files on each peer
 	private Map<String, Set<UUID>> filesToNodes = new ConcurrentHashMap<String, Set<UUID>>();
 
+	// Stuff for gossiping
+	private int searchTTL = 15;
+	private int searchInterval = 100; // ms
+
 	// Stats for this node
 	private UUID myUUID;
 	private String myName;
 	private int frontendPort;
 	private int backendPort;
-
-	// Stats for gossiping
-	private int searchTTL = 15;
-	private int searchInterval = 100; // ms
 
 	/**
 	 * Returns the instance of NetworkGraph.
@@ -389,14 +390,30 @@ public class NetworkGraph {
 		return result.toString();
 	}
 
-	public boolean addFileToNode(String file, UUID node) {
-		return false;
+	public void addNodeForFile(String file, UUID node) {
+		Set<UUID> nodes = filesToNodes.get(file);
+		if(nodes == null) {
+			nodes = new ConcurrentSkipListSet<UUID>();
+			filesToNodes.put(file, nodes);
+		}
+		
+		nodes.add(node);
 	};
+	
+	public void addNodeSetForFile(String file, Set<UUID> nodeset) {
+		Set<UUID> nodes = filesToNodes.get(file);
+		if (nodes == null) {
+			nodes = new ConcurrentSkipListSet<UUID>();
+			filesToNodes.put(file, nodes);
+		}
+
+		nodes.addAll(nodeset);
+	}
 
 	public Set<UUID> getNodesWithFile(String file) {
 		Set<UUID> result = filesToNodes.get(file);
 
-		if (result.isEmpty()) {
+		if (result == null) {
 			// TODO: if there are no result, we need to ask our neighbors
 			// to search for them
 		}

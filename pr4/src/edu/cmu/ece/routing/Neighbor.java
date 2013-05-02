@@ -14,8 +14,10 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
@@ -198,102 +200,31 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 				} else if (message.startsWith("Name ")) {
 					name = message.substring(5);
 				} else if (message.equals("Table")) {
-					Type tableType = new TypeToken<HashMap<UUID, HashMap<UUID, Integer>>>() {
-					}.getType();
-
-					// Parse in full table
-					String tableLine = in.readLine();
-					Map<UUID, Map<UUID, Integer>> table = new Gson().fromJson(
-							tableLine, tableType);
-
-					// Add our full table
-					for (Map.Entry<UUID, Map<UUID, Integer>> node : table
-							.entrySet()) {
-						for (Map.Entry<UUID, Integer> peer : node.getValue()
-								.entrySet()) {
-							// Skip ourself
-							if (node.getKey().equals(network.getUUID()))
-								continue;
-
-							network.addAdjacency(node.getKey(), peer.getKey(),
-									peer.getValue());
-						}
-					}
+					handleTableUpdate();
 				} else if (message.startsWith("NameUpdate")) {
-					// Prep JSON
-					Gson gson = new Gson();
-					Type pathType = new TypeToken<ArrayList<UUID>>() {
-					}.getType();
-					Type mapType = new TypeToken<HashMap<UUID, String>>() {
-					}.getType();
-
-					// Read in path
-					String pathLine = in.readLine();
-					List<UUID> path = gson.fromJson(pathLine, pathType);
-					path.add(network.getUUID());
-
-					// Read in update
-					String namesLine = in.readLine();
-					Map<UUID, String> updates = gson.fromJson(namesLine,
-							mapType);
-
-					// Check JSON parsing
-					if (path == null || updates == null)
-						throw new IOException("Invalid JSON.");
-
-					// Push updates to table
-					for (Map.Entry<UUID, String> e : updates.entrySet()) {
-						network.addName(e.getKey(), e.getValue());
-					}
-
-					// Inform all our other neighbors
-					for (Neighbor n : network.getNeighbors()) {
-						n.sendNames(path, updates);
-					}
-
+					handleNameUpdates();
 				} else if (message.startsWith("Updates ")) {
-					// Prep JSON
-					Gson gson = new Gson();
-					Type pathType = new TypeToken<ArrayList<UUID>>() {
-					}.getType();
-					Type mapType = new TypeToken<HashMap<UUID, Integer>>() {
-					}.getType();
-
 					// Parse seqNum from update header
 					int seqNum = Integer.parseInt(message.split(" ")[1]);
 
-					// Read in path
-					String pathLine = in.readLine();
-					List<UUID> path = gson.fromJson(pathLine, pathType);
-					path.add(network.getUUID());
+					handleUpdates(seqNum);
+				} else if (message.startsWith("Gossip ")) {
+					// Parse our header
+					String file = in.readLine();
+					String type = message.split(" ")[1];
+					int ttl = Integer.parseInt(message.split(" ")[2]);
 
-					// Read in map
-					String mapLine = in.readLine();
-					Map<UUID, Integer> updates = gson
-							.fromJson(mapLine, mapType);
+					// Handle our message
+					handleGossip(file);
 
-					// Check JSON parsing
-					if (path == null || updates == null)
-						throw new IOException("Invalid JSON.");
-
-					// Ignore old sequence numbers. Just pull whole message to
-					// toss it. The sequence number corresponds to the original
-					// sender.
-					int lastSeqNum = network.lastSeqNum(path.get(0));
-					if (seqNum < lastSeqNum)
-						continue;
-					network.setLastSeqNum(path.get(0), seqNum);
-
-					// Push these updates into our table
-					for (Map.Entry<UUID, Integer> peer : updates.entrySet()) {
-						network.addAdjacency(path.get(0), peer.getKey(),
-								peer.getValue());
+					// Send our reply if necessary
+					if (type.equals("request")) {
+						sendGossipReply(file, ttl);
+					} else if (type.equals("reply")) {
+						// TODO: nothing?
 					}
 
-					// Inform all our other neighbors
-					for (Neighbor n : network.getNeighbors()) {
-						n.sendChanges(seqNum, path, updates);
-					}
+					// TODO: if we don't have a gossiper, we must create one
 				} else {
 					// Invalid message
 				}
@@ -327,9 +258,119 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		// Retry
 		run();
 	}
+	
+	private void handleTableUpdate() throws IOException {
+		Type tableType = new TypeToken<HashMap<UUID, HashMap<UUID, Integer>>>() {
+		}.getType();
+
+		// Parse in full table
+		String tableLine = in.readLine();
+		Map<UUID, Map<UUID, Integer>> table = new Gson().fromJson(
+				tableLine, tableType);
+
+		// Add our full table
+		for (Map.Entry<UUID, Map<UUID, Integer>> node : table
+				.entrySet()) {
+			for (Map.Entry<UUID, Integer> peer : node.getValue()
+					.entrySet()) {
+				// Skip ourself
+				if (node.getKey().equals(network.getUUID()))
+					continue;
+
+				network.addAdjacency(node.getKey(), peer.getKey(),
+						peer.getValue());
+			}
+		}
+	}
+	
+	private void handleNameUpdates() throws IOException {
+		// Prep JSON
+		Gson gson = new Gson();
+		Type pathType = new TypeToken<ArrayList<UUID>>() {}.getType();
+		Type mapType = new TypeToken<HashMap<UUID, String>>() {}.getType();
+
+		// Read in path
+		String pathLine = in.readLine();
+		List<UUID> path = gson.fromJson(pathLine, pathType);
+		path.add(network.getUUID());
+
+		// Read in update
+		String namesLine = in.readLine();
+		Map<UUID, String> updates = gson.fromJson(namesLine,
+				mapType);
+
+		// Check JSON parsing
+		if (path == null || updates == null)
+			throw new IOException("Invalid JSON.");
+
+		// Push updates to table
+		for (Map.Entry<UUID, String> e : updates.entrySet()) {
+			network.addName(e.getKey(), e.getValue());
+		}
+
+		// Inform all our other neighbors
+		for (Neighbor n : network.getNeighbors()) {
+			n.sendNames(path, updates);
+		}
+
+	}
+	
+	private void handleUpdates(int seqNum) throws IOException {
+		// Prep JSON
+		Gson gson = new Gson();
+		Type pathType = new TypeToken<ArrayList<UUID>>() {}.getType();
+		Type mapType = new TypeToken<HashMap<UUID, Integer>>() {}.getType();
+
+		// Read in path
+		String pathLine = in.readLine();
+		List<UUID> path = gson.fromJson(pathLine, pathType);
+		path.add(network.getUUID());
+
+		// Read in map
+		String mapLine = in.readLine();
+		Map<UUID, Integer> updates = gson
+				.fromJson(mapLine, mapType);
+
+		// Check JSON parsing
+		if (path == null || updates == null)
+			throw new IOException("Invalid JSON.");
+
+		// Ignore old sequence numbers. Just pull whole message to
+		// toss it. The sequence number corresponds to the original
+		// sender.
+		int lastSeqNum = network.lastSeqNum(path.get(0));
+		if (seqNum < lastSeqNum)
+			return;
+		network.setLastSeqNum(path.get(0), seqNum);
+
+		// Push these updates into our table
+		for (Map.Entry<UUID, Integer> peer : updates.entrySet()) {
+			network.addAdjacency(path.get(0), peer.getKey(),
+					peer.getValue());
+		}
+
+		// Inform all our other neighbors
+		for (Neighbor n : network.getNeighbors()) {
+			n.sendChanges(seqNum, path, updates);
+		}
+	}
+
+	private void handleGossip(String file) throws IOException {
+		// Prep JSON
+		Gson gson = new Gson();
+		Type type = new TypeToken<HashSet<UUID>>() {
+		}.getType();
+
+		// Parse in our data from the message
+		String dataString = in.readLine();
+		Set<UUID> nodes = gson.fromJson(dataString, type);
+
+		// Add the nodes to our table
+		network.addNodeSetForFile(file, nodes);
+	}
 
 	/*
-	 * Sends a keep-alive periodically to our neighbor Send at 1/3 the timeout
+	 * Sends a keep-alive periodically to our neighbor. Send at 1/3 the timeout
 	 * so we have to miss two in a row
 	 */
 	private class KeepAliveTimer extends TimerTask {
@@ -426,6 +467,30 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 			n.sendChanges(seqNum, myself, changes);
 		}
+	}
+
+	private void sendGossipRequest(String file, int ttl) {
+		// Write out header
+		String header = "Gossip request " + ttl + "\r\n";
+		header += file + "\r\n";
+		out.print(header);
+		
+		// Send data
+		Gson gson = new Gson();
+		Set<UUID> nodes = network.getNodesWithFile(file);
+		out.println(gson.toJson(nodes));
+	}
+
+	private void sendGossipReply(String file, int ttl) {
+		// Write out header
+		String header = "Gossip reply " + ttl + "\r\n";
+		header += file + "\r\n";
+		out.print(header);
+
+		// Send data
+		Gson gson = new Gson();
+		Set<UUID> nodes = network.getNodesWithFile(file);
+		out.println(gson.toJson(nodes));
 	}
 
 	public UUID getUuid() {
