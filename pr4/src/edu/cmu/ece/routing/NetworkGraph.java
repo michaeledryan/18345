@@ -36,6 +36,7 @@ public class NetworkGraph {
 	// Stuff for gossiping
 	private int searchTTL = 15;
 	private int searchInterval = 100; // ms
+	private Map<String, Gossiper> activeGossipers = new ConcurrentHashMap<String, Gossiper>();
 
 	// Stats for this node
 	private UUID myUUID;
@@ -115,6 +116,18 @@ public class NetworkGraph {
 
 	public void setSearchInterval(int searchInterval) {
 		this.searchInterval = searchInterval;
+	}
+
+	public boolean hasGossiper(String file) {
+		return activeGossipers.containsKey(file);
+	}
+
+	public void addGossiper(String file, Gossiper g) {
+		activeGossipers.put(file, g);
+	}
+
+	public void removeGossiper(String file) {
+		activeGossipers.remove(file);
 	}
 
 	public void incNextSeqNum() {

@@ -366,7 +366,10 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 			// TODO: nothing?
 		}
 
-		// TODO: if we don't have a gossiper, we must create one
+		// If this file has no gossiper, create one
+		if (!network.hasGossiper(file)) {
+			new Gossiper(file);
+		}
 	}
 
 	/*
@@ -469,28 +472,32 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		}
 	}
 
-	private void sendGossipRequest(String file, int ttl) {
-		// Write out header
-		String header = "Gossip request " + ttl + "\r\n";
-		header += file + "\r\n";
-		out.print(header);
-		
-		// Send data
-		Gson gson = new Gson();
-		Set<UUID> nodes = network.getNodesWithFile(file);
-		out.println(gson.toJson(nodes));
+	public void sendGossipRequest(String file, int ttl) {
+		synchronized (commLock) {
+			// Write out header
+			String header = "Gossip request " + ttl + "\r\n";
+			header += file + "\r\n";
+			out.print(header);
+
+			// Send data
+			Gson gson = new Gson();
+			Set<UUID> nodes = network.getNodesWithFile(file);
+			out.println(gson.toJson(nodes));
+		}
 	}
 
 	private void sendGossipReply(String file, int ttl) {
-		// Write out header
-		String header = "Gossip reply " + ttl + "\r\n";
-		header += file + "\r\n";
-		out.print(header);
+		synchronized (commLock) {
+			// Write out header
+			String header = "Gossip reply " + ttl + "\r\n";
+			header += file + "\r\n";
+			out.print(header);
 
-		// Send data
-		Gson gson = new Gson();
-		Set<UUID> nodes = network.getNodesWithFile(file);
-		out.println(gson.toJson(nodes));
+			// Send data
+			Gson gson = new Gson();
+			Set<UUID> nodes = network.getNodesWithFile(file);
+			out.println(gson.toJson(nodes));
+		}
 	}
 
 	public UUID getUuid() {
