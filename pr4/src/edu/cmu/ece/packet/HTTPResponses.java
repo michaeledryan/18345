@@ -294,4 +294,10 @@ public class HTTPResponses {
 		out.flush();
 		
 	}
+
+	public static void sendSearchResponse(String substring,
+			HTTPRequestPacket request, PrintWriter out) {
+		// TODO: this function
+		System.out.println("Search for this file: " + substring);
+	}
 }

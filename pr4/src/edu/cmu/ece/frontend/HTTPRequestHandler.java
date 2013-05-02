@@ -123,8 +123,17 @@ public class HTTPRequestHandler {
 				return;
 			}
 
+			// Returns a list of peers and their distance with our file
 			if (requested.startsWith("rank", 5)) {
 				HTTPResponses.sendRankResponse(requested.substring(10),
+						request, textOut);
+				return;
+			}
+
+			// Returns something??
+			// TODO: fix this comment
+			if (requested.startsWith("search", 5)) {
+				HTTPResponses.sendSearchResponse(requested.substring(12),
 						request, textOut);
 				return;
 			}

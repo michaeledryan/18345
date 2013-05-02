@@ -36,6 +36,10 @@ public class NetworkGraph {
 	private int frontendPort;
 	private int backendPort;
 
+	// Stats for gossiping
+	private int searchTTL = 15;
+	private int searchInterval = 100; // ms
+
 	/**
 	 * Returns the instance of NetworkGraph.
 	 * 
@@ -92,6 +96,22 @@ public class NetworkGraph {
 
 	public void setBackendPort(int backendPort) {
 		this.backendPort = backendPort;
+	}
+
+	public int getSearchTTL() {
+		return searchTTL;
+	}
+
+	public void setSearchTTL(int searchTTL) {
+		this.searchTTL = searchTTL;
+	}
+
+	public int getSearchInterval() {
+		return searchInterval;
+	}
+
+	public void setSearchInterval(int searchInterval) {
+		this.searchInterval = searchInterval;
 	}
 
 	public void incNextSeqNum() {

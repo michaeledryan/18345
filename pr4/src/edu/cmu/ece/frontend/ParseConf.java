@@ -132,6 +132,10 @@ public class ParseConf {
 			backendPort = Integer.parseInt(val);
 		} else if (key.equals("content_dir")) {
 			HTTPRequestHandler.setContentPath(val);
+		} else if (key.equals("search_ttl")) {
+			NetworkGraph.getInstance().setSearchTTL(Integer.parseInt(val));
+		} else if (key.equals("search_interval")) {
+			NetworkGraph.getInstance().setSearchInterval(Integer.parseInt(val));
 		} else if (key.matches("peer_\\d*")) {
 			String[] peerInfo = val.split(",");
 			if (peerInfo.length != 5) {
