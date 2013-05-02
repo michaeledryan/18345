@@ -297,7 +297,25 @@ public class HTTPResponses {
 
 	public static void sendSearchResponse(String substring,
 			HTTPRequestPacket request, PrintWriter out) {
-		// TODO: this function
 		System.out.println("Search for this file: " + substring);
+
+		String header = "HTTP/1.1 200 OK\r\n";
+		String connection = request.getHeader("Connection");
+
+		if (connection != null && connection.equalsIgnoreCase("close"))
+			header += "Connection: Close\r\n";
+		else
+			header += "Connection: Keep-Alive\r\n";
+		header += "Date: " + HTTPResponseHeader.formatDate(new Date()) + "\r\n";
+
+		String page = NetworkGraph.getInstance().getSearchResults(substring);
+
+		header += "Content-Type: text/html\r\n";
+		header += "Content-Length: " + page.length() + "\r\n";
+		header += "\r\n";
+
+		out.write(header);
+		out.write(page);
+		out.flush();
 	}
 }

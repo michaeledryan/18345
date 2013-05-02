@@ -26,9 +26,11 @@ public class NetworkGraph {
 	int nextSeqNum = 0;
 
 	// Keeps track of our entire network state graph
-
 	private Map<UUID, Map<UUID, Integer>> adjacencies = new ConcurrentHashMap<UUID, Map<UUID, Integer>>();
 	private Map<UUID, String> nameTable = new ConcurrentHashMap<UUID, String>();
+
+	// Keeps track of files on each peer
+	private Map<String, Set<UUID>> filesToNodes = new ConcurrentHashMap<String, Set<UUID>>();
 
 	// Stats for this node
 	private UUID myUUID;
@@ -376,14 +378,45 @@ public class NetworkGraph {
 			return "[]";
 		}
 
-			for (GraphPeer peer : peersWithFile) {
-				if (shortestPaths.containsKey(peer.getUuid())) {
-					CostPathPair tmp = shortestPaths.get(peer.getUuid());
-					result.add(new GraphNode(tmp.path.get(tmp.path.size() - 1),
-							tmp.cost, tmp.path).toJSON());
-				}
+		for (GraphPeer peer : peersWithFile) {
+			if (shortestPaths.containsKey(peer.getUuid())) {
+				CostPathPair tmp = shortestPaths.get(peer.getUuid());
+				result.add(new GraphNode(tmp.path.get(tmp.path.size() - 1),
+						tmp.cost, tmp.path).toJSON());
 			}
+		}
 
 		return result.toString();
+	}
+
+	public boolean addFileToNode(String file, UUID node) {
+		return false;
+	};
+
+	public Set<UUID> getNodesWithFile(String file) {
+		Set<UUID> result = filesToNodes.get(file);
+
+		if (result.isEmpty()) {
+			// TODO: if there are no result, we need to ask our neighbors
+			// to search for them
+		}
+
+		return result;
+	}
+
+	/*
+	 * Given a file, consults our network graph to
+	 */
+	public String getSearchResults(String file) {
+		String result = "[{\"content\":\"" + file + "\", \"peers\":";
+
+		// Convert peer set to JSON
+		Set<UUID> nodes = getNodesWithFile(file);
+		Gson gson = new Gson();
+		result += gson.toJson(nodes);
+
+		result += "}]";
+
+		return result;
 	}
 }
