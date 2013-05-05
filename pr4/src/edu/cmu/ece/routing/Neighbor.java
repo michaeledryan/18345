@@ -368,7 +368,8 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 		// If this file has no gossiper, create one
 		if (!network.hasGossiper(file)) {
-			new Gossiper(file);
+			System.out.println("MAKING NEW GOSSIPER");
+			new Gossiper(file, ttl, null, null);
 		}
 	}
 
@@ -474,11 +475,18 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 	public void sendGossipRequest(String file, int ttl) {
 		synchronized (commLock) {
+			
+			if (out == null) {
+				return;
+			}
+			
 			// Write out header
 			String header = "Gossip request " + ttl + "\r\n";
 			header += file + "\r\n";
 			out.print(header);
 
+
+			
 			// Send data
 			Gson gson = new Gson();
 			Set<UUID> nodes = network.getNodesWithFile(file);
@@ -488,6 +496,11 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 	private void sendGossipReply(String file, int ttl) {
 		synchronized (commLock) {
+			
+			if (out == null) {
+				return;
+			}
+			
 			// Write out header
 			String header = "Gossip reply " + ttl + "\r\n";
 			header += file + "\r\n";

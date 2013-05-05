@@ -1,5 +1,6 @@
 package edu.cmu.ece.routing;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -14,6 +15,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 import com.google.gson.Gson;
 
+import edu.cmu.ece.frontend.HTTPRequestHandler;
 import edu.cmu.ece.routing.Neighbor.NeighborJSON;
 
 public class NetworkGraph {
@@ -119,6 +121,8 @@ public class NetworkGraph {
 	}
 
 	public boolean hasGossiper(String file) {
+		Gson gson = new Gson();
+		System.out.println(gson.toJson(activeGossipers.keySet()));
 		return activeGossipers.containsKey(file);
 	}
 
@@ -425,11 +429,28 @@ public class NetworkGraph {
 
 	public Set<UUID> getNodesWithFile(String file) {
 		Set<UUID> result = filesToNodes.get(file);
-
+		Set<UUID> foreignerSet;
+		int myTTL = searchTTL;
+		UUID[] neighborUUIDS;
+		File f = new File(HTTPRequestHandler.getContentPath() + file);
 		if (result == null) {
+			result = new ConcurrentSkipListSet<UUID>();
+		}
+		if(f.exists()) {
+			result.add(myUUID);
+		}
+		
+		/*if (result == null) {
+			while (myTTL > 0) {	
+				neighborUUIDS = (UUID[]) neighbors.keySet().toArray();
+				Random rand = new Random(System.currentTimeMillis());
+				UUID currentNeighbor = neighborUUIDS[rand.nextInt(neighborUUIDS.length)];	
+				neighbors.get(currentNeighbor).sendGossipRequest(file, myTTL);
+			}
+			
 			// TODO: if there are no result, we need to ask our neighbors
 			// to search for them
-		}
+		}*/
 
 		return result;
 	}

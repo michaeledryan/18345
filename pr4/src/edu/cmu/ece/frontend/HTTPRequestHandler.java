@@ -19,6 +19,7 @@ import edu.cmu.ece.packet.HTTPResponses;
 import edu.cmu.ece.packet.ResponseFileData;
 import edu.cmu.ece.packet.UDPPacket;
 import edu.cmu.ece.packet.UDPPacketType;
+import edu.cmu.ece.routing.Gossiper;
 import edu.cmu.ece.routing.GraphPeer;
 import edu.cmu.ece.routing.Neighbor;
 import edu.cmu.ece.routing.NetworkGraph;
@@ -133,8 +134,9 @@ public class HTTPRequestHandler {
 			// Returns something??
 			// TODO: fix this comment
 			if (requested.startsWith("search", 5)) {
-				HTTPResponses.sendSearchResponse(requested.substring(12),
-						request, textOut);
+				System.out.println("SEARCH");
+				new Gossiper(requested.substring(12), NetworkGraph
+						.getInstance().getSearchTTL(), request, textOut);
 				return;
 			}
 
@@ -378,5 +380,9 @@ public class HTTPRequestHandler {
 		// Kill this thread - this socket has been passed to the neighbor's
 		// own thread
 		Thread.currentThread().interrupt();
+	}
+
+	public static String getContentPath() {
+		return contentPath;
 	}
 }
