@@ -148,6 +148,8 @@ public class HTTPClientHandler implements Runnable {
 	 */
 	public void addToQueue(UDPPacket packet) {
 		gotAck = true;
+		
+		System.out.println(" Adding to a queue!");
 		if (client.isClosed()) {
 			// System.out.println("\tClient is dead, dismiss incoming");
 			packetQueue.clear();
@@ -201,6 +203,7 @@ public class HTTPClientHandler implements Runnable {
 	private void sendQueueToClient() {
 		sending = true;
 
+		System.out.println("\tsending from a queue!");
 		while (!packetQueue.isEmpty()
 				&& packetQueue.peek().getSequenceNumber() == nextSeqNumToSend) {
 			UDPPacket packet;

@@ -12,12 +12,14 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import edu.cmu.ece.DCException;
+import edu.cmu.ece.frontend.HTTPRequestHandler;
 import edu.cmu.ece.packet.HTTPRequestPacket;
 import edu.cmu.ece.packet.HTTPResponseHeader;
 import edu.cmu.ece.packet.HTTPResponses;
 import edu.cmu.ece.packet.ResponseFileData;
 import edu.cmu.ece.packet.UDPPacket;
 import edu.cmu.ece.packet.UDPPacketType;
+import edu.cmu.ece.routing.RoutingTable;
 
 /**
  * Handles a reqeust for data to be sent over the UDP connection to a remote
@@ -98,13 +100,20 @@ public class UDPRequestHandler {
 		System.out.println("\tRequested file: " + frontendRequest.getRequest());
 	}
 
+	
+	
 	/**
 	 * Returns the number of packets;
 	 */
 	public int initializeRequest() {
 		// Check if the file exists locally
 		String filename = frontendRequest.getRequest();
+		System.out.println("Looking for:" + filename);
 		File target = new File(filename);
+		if (!target.exists()) {
+			target = new File(HTTPRequestHandler.getContentPath() + 
+					filename);
+		}
 		if (target.exists()) {
 			frontendRequest.parseRanges(target);
 
@@ -205,14 +214,9 @@ public class UDPRequestHandler {
 		// Running average bitrate
 		long now = System.currentTimeMillis();
 		if ((bytesSent + numBytes) >= ((now - timeLastSent) * byteRate / 2000)) {
-			System.err.println("CANNOT SEND: already sent"
-					+ (now - timeLastSent) * byteRate / 2000);
-			// couldNotSend = true;
 			return false;
 		} else {
 			bytesSent += numBytes;
-			// timeLastSent = System.currentTimeMillis();
-			System.out.println("CAN SEND with br = " + byteRate);
 			return true;
 		}
 

@@ -207,6 +207,7 @@ public class HTTPRequestHandler {
 			}
 		}
 
+		System.out.println("Sent all requests");
 	}
 
 	private void addNeighbor(String parameters) {

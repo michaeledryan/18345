@@ -48,7 +48,7 @@ public class UDPPacketHandler implements Runnable {
 			return;
 			// Trigger a UDPRequestHandler to find the file and send it out.
 			// Add the send request to our sending manager
-			// MAke the handler visible so that we can get it later for ACKs
+			// Make the handler visible so that we can get it later for ACKs
 
 		case ACK:
 			// System.out.println("\tGot UDP ACK " +

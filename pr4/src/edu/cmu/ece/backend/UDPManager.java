@@ -60,7 +60,7 @@ public class UDPManager implements Runnable {
 				packet = new DatagramPacket(new byte[packetLength],
 						packetLength);
 				socket.receive(packet);
-				// System.out.println("UDP packet received.");
+				System.out.println("UDP packet received.");
 
 				// Handle packet then loop back
 				UDPPacketHandler handle = new UDPPacketHandler(packet);

@@ -11,6 +11,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -26,13 +27,18 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import edu.cmu.ece.backend.PeerData;
+import edu.cmu.ece.backend.UDPRequestHandler;
+import edu.cmu.ece.backend.UDPSender;
 import edu.cmu.ece.packet.HTTPRequestPacket;
+import edu.cmu.ece.packet.UDPPacket;
+import edu.cmu.ece.packet.UDPPacketType;
 
 public class Neighbor implements Comparable<Neighbor>, Runnable {
 	private static int peerTimeout = 1000; // ms
 	private static int connectTimeout = 10000; // ms
 
 	private NetworkGraph network = NetworkGraph.getInstance();
+	private RoutingTable router = RoutingTable.getInstance();
 
 	private UUID uuid;
 	private String name;
@@ -258,19 +264,68 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		int clientID = Integer.parseInt(messages[1]);
 		int freq = Integer.parseInt(messages[2]);
 		int phase = Integer.parseInt(messages[3]);
-		UUID finalNode = UUID.fromString(messages[4]);
-		String ip = connection.getRemoteSocketAddress().toString();
-		System.out.println("\tREMOTE IP " + ip);
-
+		UUID finalNode = UUID.fromString(messages[5]);
+		String[] address = connection.getRemoteSocketAddress().toString()
+				.substring(1).split(":");
+		String ip = address[0];
+		int port = Integer.parseInt(messages[4]);
 		Gson gson = new Gson();
 
-		System.out.println(messages[5]);
-		Map<String, String> map = gson.fromJson(messages[5],
+		String file = messages[6];
+		
+		Map<String, String> map = gson.fromJson(messages[7],
 				new TypeToken<HashMap<String, String>>() {
 				}.getType());
 
-		// TODO: Spin up a UDPRequestHandler that will take care of the info we
-		// just got.
+		String headers = "";
+
+		for (String s : map.keySet()) {
+			headers += s + ": " + map.get(s) + "\r\n";
+		}
+		headers += "\r\n\r\n";
+
+		
+		// Set up the request packet
+		byte[] requestStringBytes = ("GET " + file + " HTTP/1.1\r\n" + headers)
+				.getBytes();
+		byte[] packetData = new byte[12 + requestStringBytes.length];
+
+		// Add bitrate
+		System.arraycopy(ByteBuffer.allocate(4).putInt(1 << 20).array(), 0,
+				packetData, 0, 4);
+		// Add data
+		System.arraycopy(requestStringBytes, 0, packetData, 12,
+				requestStringBytes.length);
+
+		System.arraycopy(ByteBuffer.allocate(4).putInt(phase).array(),
+				0, packetData, 8, 4);
+		
+		// Add period
+		System.arraycopy(ByteBuffer.allocate(4).putInt(freq).array(),
+				0, packetData, 4, 4);
+		
+		
+		UDPPacket packet = null;
+		
+		try {
+			packet = new UDPPacket(clientID, 0, ip, port, packetData,
+					UDPPacketType.REQUEST, 0);
+		} catch (UnknownHostException e1) {
+			e1.printStackTrace();
+		}
+
+		PeerData pd = new PeerData(ip, port, clientID, 0);
+
+		if (router.getRequest(pd) != null) {
+			router.getRequest(pd).kill();
+		}
+		System.out.println("Request for content over UDP.");
+		UDPRequestHandler handler = new UDPRequestHandler(packet);
+		int numPackets = handler.initializeRequest();
+		router.addToRequests(new PeerData(ip, port, clientID, handler.getID()),
+				handler);
+		UDPSender.getInstance().requestToSend(handler, numPackets);
+		return;
 
 	}
 
@@ -279,8 +334,10 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		String message = "View#";
 		message += clientID + "#";
 		message += freq + "#" + phaseOffset + "#";
+		message += network.getBackendPort() + "#";
 		message += finalDest + "#";
 		Gson gson = new Gson();
+		message += request.getRequest().split("/")[3] + "#";
 		message += gson.toJson(request.getMap());
 		message += "\r\n";
 
