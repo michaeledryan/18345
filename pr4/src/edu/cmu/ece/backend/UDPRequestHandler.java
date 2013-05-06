@@ -19,7 +19,6 @@ import edu.cmu.ece.packet.HTTPResponses;
 import edu.cmu.ece.packet.ResponseFileData;
 import edu.cmu.ece.packet.UDPPacket;
 import edu.cmu.ece.packet.UDPPacketType;
-import edu.cmu.ece.routing.RoutingTable;
 
 /**
  * Handles a reqeust for data to be sent over the UDP connection to a remote

@@ -32,6 +32,7 @@ import edu.cmu.ece.backend.UDPSender;
 import edu.cmu.ece.packet.HTTPRequestPacket;
 import edu.cmu.ece.packet.UDPPacket;
 import edu.cmu.ece.packet.UDPPacketType;
+import edu.cmu.ece.routing.NetworkGraph.CostPathPair;
 
 public class Neighbor implements Comparable<Neighbor>, Runnable {
 	private static int peerTimeout = 1000; // ms
@@ -261,18 +262,33 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	 */
 	private void handleViewRequest(String message) {
 		String[] messages = message.split("#");
+		UUID finalNode = UUID.fromString(messages[5]);
+
+		// If we are not the destination, then forward it on
+		if (!network.getUUID().equals(finalNode)) {
+			Map<UUID, CostPathPair> paths = network.getShortestPaths();
+			CostPathPair path = paths.get(finalNode);
+			UUID nextNode = path.path.get(0);
+
+			Neighbor next = network.getNeighbor(nextNode);
+			next.mirrorViewRequest(message);
+
+			// We are done
+			return;
+		}
+
+		// Otherwise do magic to start a UDP request
+		// Commit sins to read the packet
 		int clientID = Integer.parseInt(messages[1]);
 		int freq = Integer.parseInt(messages[2]);
 		int phase = Integer.parseInt(messages[3]);
-		UUID finalNode = UUID.fromString(messages[5]);
 		String[] address = connection.getRemoteSocketAddress().toString()
 				.substring(1).split(":");
 		String ip = address[0];
+			String file = messages[6];
 		int port = Integer.parseInt(messages[4]);
+
 		Gson gson = new Gson();
-
-		String file = messages[6];
-
 		Map<String, String> map = gson.fromJson(messages[7],
 				new TypeToken<HashMap<String, String>>() {
 				}.getType());
@@ -337,6 +353,12 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		message += gson.toJson(request.getMap());
 		message += "\r\n";
 
+		synchronized (commLock) {
+			out.write(message);
+		}
+	}
+
+	public void mirrorViewRequest(String message) {
 		synchronized (commLock) {
 			out.write(message);
 		}

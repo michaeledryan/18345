@@ -172,7 +172,7 @@ public class NetworkGraph {
 	 * @return a string containing JSONified fields.
 	 */
 	public String getNeighborJSONforWeb() {
-		ArrayList<NeighborJSON> neighborMaps = new ArrayList<>();
+		ArrayList<NeighborJSON> neighborMaps = new ArrayList<NeighborJSON>();
 		for (Neighbor neighbor : neighbors.values()) {
 			// If this node is connected, add it
 			if (neighbor.getDistanceMetric() >= 0) {
