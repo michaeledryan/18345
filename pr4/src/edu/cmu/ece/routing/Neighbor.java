@@ -272,7 +272,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		Gson gson = new Gson();
 
 		String file = messages[6];
-		
+
 		Map<String, String> map = gson.fromJson(messages[7],
 				new TypeToken<HashMap<String, String>>() {
 				}.getType());
@@ -284,29 +284,24 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		}
 		headers += "\r\n\r\n";
 
-		
 		// Set up the request packet
 		byte[] requestStringBytes = ("GET " + file + " HTTP/1.1\r\n" + headers)
 				.getBytes();
 		byte[] packetData = new byte[12 + requestStringBytes.length];
-
 		// Add bitrate
 		System.arraycopy(ByteBuffer.allocate(4).putInt(1 << 20).array(), 0,
 				packetData, 0, 4);
 		// Add data
 		System.arraycopy(requestStringBytes, 0, packetData, 12,
 				requestStringBytes.length);
-
-		System.arraycopy(ByteBuffer.allocate(4).putInt(phase).array(),
-				0, packetData, 8, 4);
-		
+		System.arraycopy(ByteBuffer.allocate(4).putInt(phase).array(), 0,
+				packetData, 8, 4);
 		// Add period
-		System.arraycopy(ByteBuffer.allocate(4).putInt(freq).array(),
-				0, packetData, 4, 4);
-		
-		
+		System.arraycopy(ByteBuffer.allocate(4).putInt(freq).array(), 0,
+				packetData, 4, 4);
+
 		UDPPacket packet = null;
-		
+
 		try {
 			packet = new UDPPacket(clientID, 0, ip, port, packetData,
 					UDPPacketType.REQUEST, 0);
@@ -319,6 +314,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		if (router.getRequest(pd) != null) {
 			router.getRequest(pd).kill();
 		}
+		
 		System.out.println("Request for content over UDP.");
 		UDPRequestHandler handler = new UDPRequestHandler(packet);
 		int numPackets = handler.initializeRequest();
@@ -341,8 +337,9 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		message += gson.toJson(request.getMap());
 		message += "\r\n";
 
-		out.write(message);
-
+		synchronized (commLock) {
+			out.write(message);
+		}
 	}
 
 	private void handleTableUpdate() throws IOException {

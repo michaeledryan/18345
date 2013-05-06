@@ -155,6 +155,7 @@ public class HTTPRequestHandler {
 					return;
 				} else if (NetworkGraph.getInstance().checkFile(file)) {
 					handleSearchRequest(file);
+					return;
 				} else {
 					System.out.println(file);
 					HTTPResponses.send404(request, textOut);
