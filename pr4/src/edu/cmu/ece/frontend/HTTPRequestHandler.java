@@ -2,13 +2,13 @@ package edu.cmu.ece.frontend;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.DatagramPacket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -24,6 +24,7 @@ import edu.cmu.ece.routing.Gossiper;
 import edu.cmu.ece.routing.GraphPeer;
 import edu.cmu.ece.routing.Neighbor;
 import edu.cmu.ece.routing.NetworkGraph;
+import edu.cmu.ece.routing.NetworkGraph.CostPathPair;
 import edu.cmu.ece.routing.RoutingTable;
 
 /**
@@ -188,27 +189,32 @@ public class HTTPRequestHandler {
 	}
 
 	/**
-	 * Sends an HTTP request to each neighbor with the file or a link to the
-	 * file. We need: the filename the ClientHandler id the UUID we're
-	 * attempting to get to in the long run.
+	 * Contacts remote peers that have been found via the search protocol. Gets
+	 * the list of UUIDs of peers that have the file and then sends a request on
+	 * the nearest hop to that file.
 	 * 
-	 * We're going to look for the fastest path to the file.
+	 * @param filename
+	 *            the filename for which we are searching.
 	 */
-	private void handleSearchRequest(String file) {
-		Set<UUID> uuids = graph.getNodesWithFile(file);
+	private void handleSearchRequest(String filename) {
+		Set<UUID> uuids = graph.getNodesWithFile(filename);
 		boolean hasMe = uuids.contains(graph.getUUID());
 		int actualSize = uuids.size() - (hasMe ? 1 : 0);
 		int phaseOffset = 0;
-		
+		Map<UUID, CostPathPair> paths = graph.getShortestPaths();
+
 		for (UUID u : uuids) {
 			if (!u.equals(graph.getUUID())) {
-				// This should be getNearestNeighbor
-				Neighbor n = graph.getNeighbor(u);
-				n.sendViewRequest(clientID, actualSize, phaseOffset++, u, request);
+
+				// Get first neighbor on path to final destination
+				Neighbor n = graph.getNeighbor(paths.get(u).path.get(0));
+
+				// Sends request, incrementing phaseOffset
+				n.sendViewRequest(clientID, actualSize, phaseOffset++, u,
+						request);
+
 			}
 		}
-
-		System.out.println("Sent all requests");
 	}
 
 	private void addNeighbor(String parameters) {
