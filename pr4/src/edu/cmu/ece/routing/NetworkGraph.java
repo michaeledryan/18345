@@ -392,7 +392,7 @@ public class NetworkGraph {
 		Map<UUID, CostPathPair> shortestPaths = getShortestPaths();
 		List<String> result = new ArrayList<String>();
 
-		if (peersWithFile == null){
+		if (peersWithFile == null) {
 			return "[]";
 		}
 
@@ -407,16 +407,22 @@ public class NetworkGraph {
 		return result.toString();
 	}
 
+	
+	public boolean checkFile(String file) {
+		System.out.print(filesToNodes.keySet());
+		return filesToNodes.containsKey(file);
+	}
+	
 	public void addNodeForFile(String file, UUID node) {
 		Set<UUID> nodes = filesToNodes.get(file);
-		if(nodes == null) {
+		if (nodes == null) {
 			nodes = new ConcurrentSkipListSet<UUID>();
 			filesToNodes.put(file, nodes);
 		}
-		
+
 		nodes.add(node);
 	};
-	
+
 	public void addNodeSetForFile(String file, Set<UUID> nodeset) {
 		Set<UUID> nodes = filesToNodes.get(file);
 		if (nodes == null) {
@@ -429,28 +435,13 @@ public class NetworkGraph {
 
 	public Set<UUID> getNodesWithFile(String file) {
 		Set<UUID> result = filesToNodes.get(file);
-		Set<UUID> foreignerSet;
-		int myTTL = searchTTL;
-		UUID[] neighborUUIDS;
 		File f = new File(HTTPRequestHandler.getContentPath() + file);
 		if (result == null) {
 			result = new ConcurrentSkipListSet<UUID>();
 		}
-		if(f.exists()) {
+		if (f.exists()) {
 			result.add(myUUID);
 		}
-		
-		/*if (result == null) {
-			while (myTTL > 0) {	
-				neighborUUIDS = (UUID[]) neighbors.keySet().toArray();
-				Random rand = new Random(System.currentTimeMillis());
-				UUID currentNeighbor = neighborUUIDS[rand.nextInt(neighborUUIDS.length)];	
-				neighbors.get(currentNeighbor).sendGossipRequest(file, myTTL);
-			}
-			
-			// TODO: if there are no result, we need to ask our neighbors
-			// to search for them
-		}*/
 
 		return result;
 	}

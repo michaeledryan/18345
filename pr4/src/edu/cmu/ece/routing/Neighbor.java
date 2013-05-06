@@ -26,6 +26,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import edu.cmu.ece.backend.PeerData;
+import edu.cmu.ece.packet.HTTPRequestPacket;
 
 public class Neighbor implements Comparable<Neighbor>, Runnable {
 	private static int peerTimeout = 1000; // ms
@@ -210,6 +211,8 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 					handleUpdates(seqNum);
 				} else if (message.startsWith("Gossip ")) {
 					handleGossip(message);
+				} else if (message.startsWith("View")) {
+					handleViewRequest(message);
 				} else {
 					// Invalid message
 				}
@@ -243,21 +246,60 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		// Retry
 		run();
 	}
-	
+
+	/**
+	 * TODO parse everything, spin up a UDPRequestHandler to get the data and
+	 * send things where they need to be
+	 * 
+	 * @param message
+	 */
+	private void handleViewRequest(String message) {
+		String[] messages = message.split("#");
+		int clientID = Integer.parseInt(messages[1]);
+		int freq = Integer.parseInt(messages[2]);
+		int phase = Integer.parseInt(messages[3]);
+		UUID finalNode = UUID.fromString(messages[4]);
+		String ip = connection.getRemoteSocketAddress().toString();
+		System.out.println("\tREMOTE IP " + ip);
+
+		Gson gson = new Gson();
+
+		System.out.println(messages[5]);
+		Map<String, String> map = gson.fromJson(messages[5],
+				new TypeToken<HashMap<String, String>>() {
+				}.getType());
+
+		// TODO: Spin up a UDPRequestHandler that will take care of the info we
+		// just got.
+
+	}
+
+	public void sendViewRequest(int clientID, int freq, int phaseOffset,
+			UUID finalDest, HTTPRequestPacket request) {
+		String message = "View#";
+		message += clientID + "#";
+		message += freq + "#" + phaseOffset + "#";
+		message += finalDest + "#";
+		Gson gson = new Gson();
+		message += gson.toJson(request.getMap());
+		message += "\r\n";
+
+		out.write(message);
+
+	}
+
 	private void handleTableUpdate() throws IOException {
 		Type tableType = new TypeToken<HashMap<UUID, HashMap<UUID, Integer>>>() {
 		}.getType();
 
 		// Parse in full table
 		String tableLine = in.readLine();
-		Map<UUID, Map<UUID, Integer>> table = new Gson().fromJson(
-				tableLine, tableType);
+		Map<UUID, Map<UUID, Integer>> table = new Gson().fromJson(tableLine,
+				tableType);
 
 		// Add our full table
-		for (Map.Entry<UUID, Map<UUID, Integer>> node : table
-				.entrySet()) {
-			for (Map.Entry<UUID, Integer> peer : node.getValue()
-					.entrySet()) {
+		for (Map.Entry<UUID, Map<UUID, Integer>> node : table.entrySet()) {
+			for (Map.Entry<UUID, Integer> peer : node.getValue().entrySet()) {
 				// Skip ourself
 				if (node.getKey().equals(network.getUUID()))
 					continue;
@@ -267,12 +309,14 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 			}
 		}
 	}
-	
+
 	private void handleNameUpdates() throws IOException {
 		// Prep JSON
 		Gson gson = new Gson();
-		Type pathType = new TypeToken<ArrayList<UUID>>() {}.getType();
-		Type mapType = new TypeToken<HashMap<UUID, String>>() {}.getType();
+		Type pathType = new TypeToken<ArrayList<UUID>>() {
+		}.getType();
+		Type mapType = new TypeToken<HashMap<UUID, String>>() {
+		}.getType();
 
 		// Read in path
 		String pathLine = in.readLine();
@@ -281,8 +325,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 		// Read in update
 		String namesLine = in.readLine();
-		Map<UUID, String> updates = gson.fromJson(namesLine,
-				mapType);
+		Map<UUID, String> updates = gson.fromJson(namesLine, mapType);
 
 		// Check JSON parsing
 		if (path == null || updates == null)
@@ -299,12 +342,14 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		}
 
 	}
-	
+
 	private void handleUpdates(int seqNum) throws IOException {
 		// Prep JSON
 		Gson gson = new Gson();
-		Type pathType = new TypeToken<ArrayList<UUID>>() {}.getType();
-		Type mapType = new TypeToken<HashMap<UUID, Integer>>() {}.getType();
+		Type pathType = new TypeToken<ArrayList<UUID>>() {
+		}.getType();
+		Type mapType = new TypeToken<HashMap<UUID, Integer>>() {
+		}.getType();
 
 		// Read in path
 		String pathLine = in.readLine();
@@ -313,8 +358,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 		// Read in map
 		String mapLine = in.readLine();
-		Map<UUID, Integer> updates = gson
-				.fromJson(mapLine, mapType);
+		Map<UUID, Integer> updates = gson.fromJson(mapLine, mapType);
 
 		// Check JSON parsing
 		if (path == null || updates == null)
@@ -330,8 +374,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 		// Push these updates into our table
 		for (Map.Entry<UUID, Integer> peer : updates.entrySet()) {
-			network.addAdjacency(path.get(0), peer.getKey(),
-					peer.getValue());
+			network.addAdjacency(path.get(0), peer.getKey(), peer.getValue());
 		}
 
 		// Inform all our other neighbors
@@ -340,8 +383,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		}
 	}
 
-	private void handleGossip(String message)
-			throws IOException {
+	private void handleGossip(String message) throws IOException {
 		// Prep JSON
 		Gson gson = new Gson();
 		Type setType = new TypeToken<HashSet<UUID>>() {
@@ -475,18 +517,16 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 	public void sendGossipRequest(String file, int ttl) {
 		synchronized (commLock) {
-			
+
 			if (out == null) {
 				return;
 			}
-			
+
 			// Write out header
 			String header = "Gossip request " + ttl + "\r\n";
 			header += file + "\r\n";
 			out.print(header);
 
-
-			
 			// Send data
 			Gson gson = new Gson();
 			Set<UUID> nodes = network.getNodesWithFile(file);
@@ -496,11 +536,11 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 	private void sendGossipReply(String file, int ttl) {
 		synchronized (commLock) {
-			
+
 			if (out == null) {
 				return;
 			}
-			
+
 			// Write out header
 			String header = "Gossip reply " + ttl + "\r\n";
 			header += file + "\r\n";

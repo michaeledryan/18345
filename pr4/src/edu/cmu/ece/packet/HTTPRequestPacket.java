@@ -107,6 +107,10 @@ public class HTTPRequestPacket {
 	public int[] getLowerRanges() {
 		return lowerRanges;
 	}
+	
+	public Map<String, String> getMap() {
+		return headers;
+	}
 
 	public int[] getUpperRanges() {
 		return upperRanges;

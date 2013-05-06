@@ -2,6 +2,7 @@ package edu.cmu.ece.frontend;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.DatagramPacket;
@@ -132,7 +133,6 @@ public class HTTPRequestHandler {
 			}
 
 			// Returns something??
-			// TODO: fix this comment
 			if (requested.startsWith("search", 5)) {
 				System.out.println("SEARCH");
 				new Gossiper(requested.substring(12), NetworkGraph
@@ -153,7 +153,10 @@ public class HTTPRequestHandler {
 				if (RoutingTable.getInstance().checkPath(file)) {
 					handleRemoteRequest(file);
 					return;
+				} else if (NetworkGraph.getInstance().checkFile(file)) {
+					handleSearchRequest(file);
 				} else {
+					System.out.println(file);
 					HTTPResponses.send404(request, textOut);
 					return;
 				}
@@ -181,6 +184,29 @@ public class HTTPRequestHandler {
 			HTTPResponses.send404(request, textOut);
 			return;
 		}
+	}
+
+	/**
+	 * Sends an HTTP request to each neighbor with the file or a link to the
+	 * file. We need: the filename the ClientHandler id the UUID we're
+	 * attempting to get to in the long run.
+	 * 
+	 * We're going to look for the fastest path to the file.
+	 */
+	private void handleSearchRequest(String file) {
+		Set<UUID> uuids = graph.getNodesWithFile(file);
+		boolean hasMe = uuids.contains(graph.getUUID());
+		int actualSize = uuids.size() - (hasMe ? 1 : 0);
+		int phaseOffset = 0;
+		
+		for (UUID u : uuids) {
+			if (!u.equals(graph.getUUID())) {
+				// This should be getNearestNeighbor
+				Neighbor n = graph.getNeighbor(u);
+				n.sendViewRequest(clientID, actualSize, phaseOffset++, u, request);
+			}
+		}
+
 	}
 
 	private void addNeighbor(String parameters) {
