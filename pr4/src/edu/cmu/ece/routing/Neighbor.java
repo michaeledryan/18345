@@ -361,6 +361,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 	public void mirrorViewRequest(String message) {
 		synchronized (commLock) {
 			out.write(message);
+			out.write("\r\n");
 		}
 	}
 
