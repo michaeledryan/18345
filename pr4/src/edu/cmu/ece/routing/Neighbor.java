@@ -285,7 +285,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		String[] address = connection.getRemoteSocketAddress().toString()
 				.substring(1).split(":");
 		String ip = address[0];
-			String file = messages[6];
+		String file = messages[6];
 		int port = Integer.parseInt(messages[4]);
 
 		Gson gson = new Gson();
@@ -330,7 +330,7 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		if (router.getRequest(pd) != null) {
 			router.getRequest(pd).kill();
 		}
-		
+
 		System.out.println("Request for content over UDP.");
 		UDPRequestHandler handler = new UDPRequestHandler(packet);
 		int numPackets = handler.initializeRequest();
@@ -481,7 +481,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 		if (type.equals("request")) {
 			sendGossipReply(file, ttl);
 		} else if (type.equals("reply")) {
-			// TODO: nothing?
 		}
 
 		// If this file has no gossiper, create one

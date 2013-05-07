@@ -407,12 +407,10 @@ public class NetworkGraph {
 		return result.toString();
 	}
 
-	
 	public boolean checkFile(String file) {
-		System.out.print(filesToNodes.keySet());
 		return filesToNodes.containsKey(file);
 	}
-	
+
 	public void addNodeForFile(String file, UUID node) {
 		Set<UUID> nodes = filesToNodes.get(file);
 		if (nodes == null) {
@@ -445,7 +443,7 @@ public class NetworkGraph {
 
 		return result;
 	}
-	
+
 	/*
 	 * Given a file, consults our network graph to
 	 */
@@ -461,7 +459,5 @@ public class NetworkGraph {
 
 		return result;
 	}
-	
-	
-	
+
 }

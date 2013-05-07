@@ -16,7 +16,8 @@ public class Gossiper implements Runnable {
 
 	private NetworkGraph network = NetworkGraph.getInstance();
 
-	public Gossiper(String file, int ttl, HTTPRequestPacket request, PrintWriter out) {
+	public Gossiper(String file, int ttl, HTTPRequestPacket request,
+			PrintWriter out) {
 
 		this.file = file;
 		this.ttl = ttl;
@@ -53,9 +54,12 @@ public class Gossiper implements Runnable {
 			try {
 				Thread.sleep(interval);
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+		}
+
+		while (--ttl < -10) {
+
 		}
 
 		// Remove ourselves from the table
