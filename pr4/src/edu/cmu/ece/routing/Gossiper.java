@@ -24,7 +24,6 @@ public class Gossiper implements Runnable {
 		this.interval = network.getSearchInterval();
 		this.out = out;
 		this.request = request;
-		System.out.println("Gossiper for: " + file);
 
 		// Add ourself to the table
 		network.addGossiper(file, this);

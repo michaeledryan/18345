@@ -27,8 +27,6 @@ public class UDPPacketHandler implements Runnable {
 	@Override
 	public void run() {
 		// Get peer data to look up in routing table
-		// System.out.println("UDP packet with client " + packet.getClientID()
-		// + " and request " + packet.getRequestID());
 		PeerData pd = new PeerData(packet.getRemoteIP(),
 				packet.getRemotePort(), packet.getClientID(),
 				packet.getRequestID());
@@ -51,7 +49,6 @@ public class UDPPacketHandler implements Runnable {
 			// Make the handler visible so that we can get it later for ACKs
 
 		case ACK:
-			// System.out.println("\tGot UDP ACK " +
 			// packet.getSequenceNumber());
 			if (router.getRequest(pd) != null) {
 				UDPRequestHandler request = router.getRequest(pd);
@@ -63,8 +60,6 @@ public class UDPPacketHandler implements Runnable {
 
 		case NAK:
 			// Request that a packet be resent.
-			// System.out
-			// .println("\tNAK for seqNum " + packet.getSequenceNumber());
 			if (router.getRequest(pd) != null) {
 				UDPRequestHandler request = router.getRequest(pd);
 				sender.nackPacket(request, packet.getSequenceNumber());
@@ -73,8 +68,6 @@ public class UDPPacketHandler implements Runnable {
 
 		case KILL:
 			// Tells the server to stop handling a request
-			System.out.println("Got kill request from client "
-					+ packet.getClientID());
 			if (router.getRequest(pd) != null) {
 				router.getRequest(pd).kill();
 			}
@@ -84,9 +77,6 @@ public class UDPPacketHandler implements Runnable {
 		case DATA:
 			// Get the client that requested the packet and give him the data
 			// to respond over TCP
-			// System.out
-			// .println("\tResponse content received over UDP with seqNum = "
-			// + packet.getSequenceNumber());
 			HTTPClientHandler client = router.getClientHandler(packet
 					.getClientID());
 			if (client == null) {
@@ -109,8 +99,6 @@ public class UDPPacketHandler implements Runnable {
 			return;
 
 		case CONFIG:
-			// TODO: For now, fall through to default
-			// System.out.println("\tUDP config request");
 
 		default:
 			// Do nothing - ignore invalid requests

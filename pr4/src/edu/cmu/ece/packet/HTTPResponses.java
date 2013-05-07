@@ -282,23 +282,24 @@ public class HTTPResponses {
 		else
 			header += "Connection: Keep-Alive\r\n";
 		header += "Date: " + HTTPResponseHeader.formatDate(new Date()) + "\r\n";
-		
+
 		String page = NetworkGraph.getInstance().getRank(substring);
-		
+
 		header += "Content-Type: application/json\r\n";
 		header += "Content-Length: " + page.length() + "\r\n";
 		header += "\r\n";
-		
+
 		out.write(header);
 		out.write(page);
 		out.flush();
-		
+
 	}
 
+	/**
+	 * Sends a JSONic list of the UUIDs of peers that have the requested content.
+	 */
 	public static void sendSearchResponse(String substring,
 			HTTPRequestPacket request, PrintWriter out) {
-		
-		System.out.println("Search for this file: " + substring);
 
 		String header = "HTTP/1.1 200 OK\r\n";
 		String connection = request.getHeader("Connection");
@@ -308,7 +309,7 @@ public class HTTPResponses {
 		else
 			header += "Connection: Keep-Alive\r\n";
 		header += "Date: " + HTTPResponseHeader.formatDate(new Date()) + "\r\n";
-		
+
 		String page = NetworkGraph.getInstance().getSearchResults(substring);
 
 		header += "Content-Type: application/json\r\n";

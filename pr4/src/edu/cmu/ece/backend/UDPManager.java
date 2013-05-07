@@ -60,7 +60,6 @@ public class UDPManager implements Runnable {
 				packet = new DatagramPacket(new byte[packetLength],
 						packetLength);
 				socket.receive(packet);
-				System.out.println("UDP packet received.");
 
 				// Handle packet then loop back
 				UDPPacketHandler handle = new UDPPacketHandler(packet);
@@ -82,11 +81,10 @@ public class UDPManager implements Runnable {
 	public void sendPacket(DatagramPacket packet) {
 		try {
 			int r = (int) (100 * Math.random()); // random number
-			if (r >= 0) { 
+			if (r >= 0) {
 				// check whether or not we actually send the packet.
-							// Change the number to change drop rate.
+				// Change the number to change drop rate.
 				socket.send(packet);
-				// System.out.println("YAY, " + r);
 			} else {
 				System.out.println("DROP IT LIKE ITS HOT, " + r);
 			}

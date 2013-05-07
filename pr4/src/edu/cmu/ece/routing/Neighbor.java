@@ -486,7 +486,6 @@ public class Neighbor implements Comparable<Neighbor>, Runnable {
 
 		// If this file has no gossiper, create one
 		if (!network.hasGossiper(file)) {
-			System.out.println("MAKING NEW GOSSIPER");
 			new Gossiper(file, ttl, null, null);
 		}
 	}

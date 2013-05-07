@@ -69,7 +69,7 @@ public class UDPRequestHandler {
 
 		// Set dataLength based on byterate
 		dataLength = maxDataLength;
-		
+
 		System.out.println("\tRequest has byteRate: " + byteRate);
 		System.out.println("\tUsing packets of size: " + dataLength);
 
@@ -99,19 +99,15 @@ public class UDPRequestHandler {
 		System.out.println("\tRequested file: " + frontendRequest.getRequest());
 	}
 
-	
-	
 	/**
 	 * Returns the number of packets;
 	 */
 	public int initializeRequest() {
 		// Check if the file exists locally
 		String filename = frontendRequest.getRequest();
-		System.out.println("Looking for:" + filename);
 		File target = new File(filename);
 		if (!target.exists()) {
-			target = new File(HTTPRequestHandler.getContentPath() + 
-					filename);
+			target = new File(HTTPRequestHandler.getContentPath() + filename);
 		}
 		if (target.exists()) {
 			frontendRequest.parseRanges(target);
@@ -159,9 +155,6 @@ public class UDPRequestHandler {
 	 */
 	public UDPPacket getPacket(int seqNum) {
 		// sequence number 0 is the header
-		if (seqNum == numPackets - 1) {
-			System.out.println("SENDING LAST PACKET");
-		}
 		UDPPacket packet = null;
 		if (seqNum == 0) {
 			try {

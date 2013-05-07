@@ -120,9 +120,11 @@ public class NetworkGraph {
 		this.searchInterval = searchInterval;
 	}
 
+	/**
+	 * Returns whether or not we have a active gossiper for the file.
+	 */
 	public boolean hasGossiper(String file) {
 		Gson gson = new Gson();
-		System.out.println(gson.toJson(activeGossipers.keySet()));
 		return activeGossipers.containsKey(file);
 	}
 

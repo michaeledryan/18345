@@ -135,7 +135,6 @@ public class HTTPRequestHandler {
 
 			// Returns something??
 			if (requested.startsWith("search", 5)) {
-				System.out.println("SEARCH");
 				new Gossiper(requested.substring(12), NetworkGraph
 						.getInstance().getSearchTTL(), request, textOut);
 				return;
@@ -158,7 +157,6 @@ public class HTTPRequestHandler {
 					handleSearchRequest(file);
 					return;
 				} else {
-					System.out.println(file);
 					HTTPResponses.send404(request, textOut);
 					return;
 				}
@@ -181,8 +179,6 @@ public class HTTPRequestHandler {
 			this.handleLocalRequest(target);
 			return;
 		} else {
-			System.out.println("HTTP Request, client " + clientID
-					+ "\n\t404 Not Found: " + request.getRequest());
 			HTTPResponses.send404(request, textOut);
 			return;
 		}

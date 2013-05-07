@@ -61,11 +61,11 @@ public class HTTPClientHandler implements Runnable {
 		out = client.getOutputStream();
 		textOut = new PrintWriter(out, true);
 		RoutingTable.getInstance().addtoIds(id, this);
-		
-		//Set bitrate if it doesn't yet exist
+
+		// Set bitrate if it doesn't yet exist
 		String ip = client.getInetAddress().getHostAddress();
 		RoutingTable router = RoutingTable.getInstance();
-		if(!router.bitRateSet(ip))
+		if (!router.bitRateSet(ip))
 			router.setBitRate(ip, 0);
 
 		System.out.println("HTTP Client: "
@@ -95,7 +95,6 @@ public class HTTPClientHandler implements Runnable {
 				// data to the original request
 				gotAck = false;
 
-				// System.out.println("HTTP request received, client " + id);
 				responder.determineRequest();
 
 				// Check if we must close the connection.
@@ -148,10 +147,8 @@ public class HTTPClientHandler implements Runnable {
 	 */
 	public void addToQueue(UDPPacket packet) {
 		gotAck = true;
-		
-		System.out.println(" Adding to a queue!");
+
 		if (client.isClosed()) {
-			// System.out.println("\tClient is dead, dismiss incoming");
 			packetQueue.clear();
 
 			// Send kill message to sender
@@ -159,9 +156,9 @@ public class HTTPClientHandler implements Runnable {
 				UDPManager.getInstance().sendPacket(
 						new UDPPacket(packet.getClientID(), packet
 								.getRequestID(), packet.getRemoteIP(), packet
-								.getRemotePort(),
-								new byte[0], UDPPacketType.KILL, packet
-										.getSequenceNumber()).getPacket());
+								.getRemotePort(), new byte[0],
+								UDPPacketType.KILL, packet.getSequenceNumber())
+								.getPacket());
 			} catch (UnknownHostException e) {
 				e.printStackTrace();
 			}
@@ -169,14 +166,14 @@ public class HTTPClientHandler implements Runnable {
 			return;
 		}
 
-		// System.out.println("\tWaiting on " + nextSeqNumToSend);
 		int seqNum = packet.getSequenceNumber();
 		if (received.contains(seqNum))
 			return;
 
 		packetQueue.add(packet);
 		received.add(seqNum);
-		// Send a NACK if we don't have the packet we need. This will ensure resending.
+		// Send a NACK if we don't have the packet we need. This will ensure
+		// resending.
 		if (seqNum > nextSeqNumToSend) {
 			try {
 				UDPManager.getInstance().sendPacket(
@@ -203,7 +200,6 @@ public class HTTPClientHandler implements Runnable {
 	private void sendQueueToClient() {
 		sending = true;
 
-		System.out.println("\tsending from a queue!");
 		while (!packetQueue.isEmpty()
 				&& packetQueue.peek().getSequenceNumber() == nextSeqNumToSend) {
 			UDPPacket packet;
@@ -231,7 +227,7 @@ public class HTTPClientHandler implements Runnable {
 			}
 
 		}
-		
+
 		sending = false;
 	}
 
