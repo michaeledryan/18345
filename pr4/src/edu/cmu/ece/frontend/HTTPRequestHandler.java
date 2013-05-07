@@ -203,6 +203,10 @@ public class HTTPRequestHandler {
 		int phaseOffset = 0;
 		Map<UUID, CostPathPair> paths = graph.getShortestPaths();
 
+		if (uuids.size() == 0) {
+			HTTPResponses.send404(request, textOut);
+		}
+
 		for (UUID u : uuids) {
 			if (!u.equals(graph.getUUID())) {
 
