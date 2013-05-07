@@ -120,9 +120,11 @@ public class NetworkGraph {
 		this.searchInterval = searchInterval;
 	}
 
+	/**
+	 * Returns whether or not we have a active gossiper for the file.
+	 */
 	public boolean hasGossiper(String file) {
 		Gson gson = new Gson();
-		System.out.println(gson.toJson(activeGossipers.keySet()));
 		return activeGossipers.containsKey(file);
 	}
 
@@ -407,12 +409,10 @@ public class NetworkGraph {
 		return result.toString();
 	}
 
-	
 	public boolean checkFile(String file) {
-		System.out.print(filesToNodes.keySet());
 		return filesToNodes.containsKey(file);
 	}
-	
+
 	public void addNodeForFile(String file, UUID node) {
 		Set<UUID> nodes = filesToNodes.get(file);
 		if (nodes == null) {
@@ -445,7 +445,7 @@ public class NetworkGraph {
 
 		return result;
 	}
-	
+
 	/*
 	 * Given a file, consults our network graph to
 	 */
@@ -461,7 +461,5 @@ public class NetworkGraph {
 
 		return result;
 	}
-	
-	
-	
+
 }

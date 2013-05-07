@@ -68,18 +68,15 @@ public class ParseConf {
 
 			NetworkGraph.getInstance().setUUID(myUUID);
 			NetworkGraph.getInstance().setName(name);
-			
 
 		} else {
 			myUUID = UUID.randomUUID();
 			if (name == null) {
-				System.out.print("NAME IS NULL");
 				name = myUUID.toString();
 			}
 
 			NetworkGraph.getInstance().setUUID(myUUID);
 			NetworkGraph.getInstance().setName(name);
-			
 
 			try {
 				PrintWriter out = new PrintWriter(new BufferedWriter(

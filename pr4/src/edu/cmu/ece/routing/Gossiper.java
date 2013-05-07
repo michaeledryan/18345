@@ -16,14 +16,14 @@ public class Gossiper implements Runnable {
 
 	private NetworkGraph network = NetworkGraph.getInstance();
 
-	public Gossiper(String file, int ttl, HTTPRequestPacket request, PrintWriter out) {
+	public Gossiper(String file, int ttl, HTTPRequestPacket request,
+			PrintWriter out) {
 
 		this.file = file;
 		this.ttl = ttl;
 		this.interval = network.getSearchInterval();
 		this.out = out;
 		this.request = request;
-		System.out.println("Gossiper for: " + file);
 
 		// Add ourself to the table
 		network.addGossiper(file, this);
@@ -53,9 +53,12 @@ public class Gossiper implements Runnable {
 			try {
 				Thread.sleep(interval);
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+		}
+
+		while (--ttl < -10) {
+
 		}
 
 		// Remove ourselves from the table
