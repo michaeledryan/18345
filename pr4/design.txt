@@ -1,0 +1,64 @@
+18-491 Project 4
+
+mnye  Michael Nye
+mer1  Michael Ryan
+
+
+a.  The gossip protocol as it is implemented is rather simple, which makes it performant
+    and easy to implement. However, since it randomly traverses the graph, we have two
+    major issues:
+
+        (1) The search time isn't explicitly bounded. This means convergence can take
+            theoretically infinite time to run. In practice, we have to run many rounds
+            even to converge on a small 4 node network.
+
+        (2) Convergence isn't guaranteed to be global given a TTL and explicit stop. This
+            becomes a bigger issue as the network diameter grows large. It is possible
+            that two ends of the network will never fully communicate with each other.
+
+        (3) In order to overcome the issues above, we have to set a hard limit on the
+            recursion depth, but make it as small as possible. Even for small networks
+            this necessitates a noticeable delay to the user before we can return their
+            search results.
+  
+
+
+b.  Gson 2.2.2, a JSON library from Google. Available: https://code.google.com/p/google-gson/
+    Included with source files.
+
+
+
+c.  We did not attempt either of the extra credit options. However, we do have several
+    integrated features in the transport layer. We were able to leverage the majority
+    our backend UDP transport code, so we got most of the features from pr2 working.
+
+    This means we can: (1) Watch one or several videos smoothly over peer/view. This only
+                           required that our transport code be efficient enough to serve
+                           large data quickly.
+
+                       (2) Receive chunks of content from multiple backend servers.
+                           This is accomplished by sending a "phase offset" and "period"
+                           to the different servers. A server sends back all packets
+                           with sequence numbers of the form:
+                                (period)*n + (phase offset)
+                           where n is an natural number.
+
+                       (3) Robust transfer of data. Our ACK and error recovery can
+                           tolerate very high packet loss, though with heavy hits to
+                           performance.
+
+    Missing is the bandwidth limiting. Since in pr2 this relied on explicitly stating the
+    bandwidth limit for each file and peer, we have no easy way to set this limit for files
+    that have been discovered over the network with the gossip protocol.
+
+
+
+d.  To compile, run
+    >> ant
+    To clean, run
+    >> ant clean
+
+    To run, run
+    >> java edu.cmu.ece.VodServer [-c node.conf] [frontendPort backendPort]
+
+    With node.conf structured as in the handout.
